@@ -4,12 +4,12 @@ DJing core tools to select, download, organize and enrich the music we love.
 
 ## Overview
 
-IntelliDj processes your Spotify playlists to generate curated track lists optimized for DJ sets. It extracts audio features, cleans metadata, and classifies tracks by musical style for seamless mixing.
+IntelliDj processes your Spotify playlists (exported manually) to generate curated track lists optimized for DJ sets. It cleans metadata and classifies tracks by musical style for seamless mixing.
 
 ## Features
 
-- **Spotify Integration**: Fetches tracks from your private and collaborative playlists
-- **Audio Analysis**: Extracts BPM, energy, and danceability using Spotify's audio features API
+- **Manual Spotify Export**: Uses CSVs exported from your playlists
+- **Audio Analysis**: Uses BPM, energy, and danceability already present in the export
 - **Metadata Cleaning**: Removes "extended", "radio", and bracketed variants from track names for cleaner searches
 - **Style Classification**: Automatically categorizes tracks into DJ-friendly styles (Warm/Deep, Deep/Minimal, Tech/Peak, Groovy House)
 - **CSV Output**: Generates a sorted CSV file ready for import into DJ software
@@ -24,40 +24,64 @@ IntelliDj processes your Spotify playlists to generate curated track lists optim
 
 2. **Install dependencies**:
    ```bash
-   pip install spotipy pandas
+   pip install pandas
    ```
 
-3. **Set up Spotify API credentials** (see below).
 
-## Spotify API Setup
+## Spotify Export Setup
 
-To access your Spotify data, you need to create a Spotify app:
+To access your Spotify data without the API, export your playlists as CSV using Exportify:
 
-1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-2. Create a new app
-3. Note your **Client ID** and **Client Secret**
-4. Set the redirect URI to `http://localhost:8080` (or any local URL)
-5. Set environment variables:
-   ```bash
-   export SPOTIPY_CLIENT_ID='your_client_id'
-   export SPOTIPY_CLIENT_SECRET='your_client_secret'
-   export SPOTIPY_REDIRECT_URI='http://localhost:8080'
-   ```
-
-The script will prompt for authorization on first run.
+1. Go to https://exportify.net/
+2. Export your playlist(s) as CSV
+3. Save the export as `spotify_export.csv` in the project root (or update `INPUT_FILE` in `csv_to_dj_pipeline.py`)
 
 ## Usage
 
 Run the pipeline script:
 ```bash
-python spotify_to_dj_pipeline.py
+python csv_to_dj_pipeline.py
 ```
 
 This will:
-- Fetch your playlists (up to 50)
-- Process each track's audio features
+- Read your exported playlist CSV
 - Clean track names and infer styles
 - Output `dj_candidates.csv` with tracks sorted by style then BPM
+
+## Running slskd (Docker)
+
+This repo includes a `docker-compose.yml` to run `slskd` locally.
+
+1. Install Docker Desktop (which includes Docker Compose):
+   - macOS/Windows: download and install Docker Desktop from the official Docker site.
+   - Linux: install Docker Engine and the `docker-compose` plugin from your distro packages.
+2. Ensure Docker is running.
+3. Start the container:
+   ```bash
+   docker-compose up -d
+   ```
+4. Open the web UI at `http://localhost:5030`.
+5. Copy `.env.example` to `.env` and fill in your credentials (web UI + Soulseek).
+6. Configuration lives in `slskd_data/slskd.yml` (mounted into the container). Sensitive values are read from env vars.
+
+Required env vars (see `.env.example`):
+- `SLSKD_USERNAME` / `SLSKD_PASSWORD` (web UI)
+- `SLSKD_SLSK_USERNAME` / `SLSKD_SLSK_PASSWORD` (Soulseek)
+- `SLSKD_API_KEY` (optional, API access)
+
+Additional notes from the official slskd Docker-Compose guide:
+- slskd uses ports `5030` (HTTP) and `5031` (HTTPS with a self-signed certificate), and listens on `50300` for incoming Soulseek connections. If you need inbound connectivity, map `50300:50300` in `docker-compose.yml`.
+- You can access the web UI over HTTP (`5030`) or HTTPS (`5031`).
+- Default web UI credentials are `slskd` / `slskd`. Change these if the instance is internet facing.
+- `SLSKD_REMOTE_CONFIGURATION=true` allows changing config from the web UI; consider disabling it if exposed publicly.
+- The upstream compose example uses `restart: always`. Add it if you want the container to come back after reboots.
+
+Reference: [slskd Docker-Compose guide](https://github.com/slskd/slskd?tab=readme-ov-file#with-docker-compose).
+
+To stop the container:
+```bash
+docker-compose down
+```
 
 ## Output Format
 
@@ -76,8 +100,7 @@ Tracks are deduplicated and sorted for optimal DJ workflow.
 ## Requirements
 
 - Python 3.6+
-- Spotify Premium account (for API access)
-- Internet connection for API calls
+- No API credentials required
 
 ## Contributing
 

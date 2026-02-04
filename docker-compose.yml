@@ -3,10 +3,14 @@ services:
   slskd:
     image: slskd/slskd:latest
     container_name: slskd
+    restart: always
     ports:
       - "5030:5030"
       - "5031:5031"
+      - "50300:50300"
     environment:
       - SLSKD_REMOTE_CONFIGURATION=true
+    env_file:
+      - .env
     volumes:
       - ./slskd_data:/app
