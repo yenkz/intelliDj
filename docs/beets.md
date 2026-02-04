@@ -31,6 +31,41 @@ replace:
   '\\s+$': ''
 ```
 
+## Dependencies
+
+Some plugins require external tools:
+
+- `ffmpeg` (for `replaygain`)
+- `keyfinder` binary (for `keyfinder`)
+
+Install them via your OS package manager (e.g. Homebrew on macOS, apt on Debian/Ubuntu), or run:
+
+```bash
+make install-beets-deps
+```
+
+## Plugin Checklist
+
+Verify your plugins are available:
+
+```bash
+poetry run beet version
+poetry run beet config -p
+```
+
+If you see “plugin not found”, remove it from `plugins:` or install the required package.
+
+## More Automatic Imports (Optional)
+
+If you want fewer prompts, set:
+
+```yaml
+import:
+  timid: no
+  default_action: apply
+  quiet_fallback: skip
+```
+
 ## Dry-run
 
 ```bash

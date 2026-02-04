@@ -38,4 +38,5 @@ make prereqs
 make install-docker
 make install-python
 make install-python-pip
+make install-beets-deps
 ```

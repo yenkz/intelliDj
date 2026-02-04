@@ -8,7 +8,7 @@ else
   DETECTED_OS := linux
 endif
 
-.PHONY: prereqs install-docker install-poetry install-python install-python-pip beets-import
+.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps beets-import
 
 prereqs:
 	@echo "Detected OS: $(DETECTED_OS)"
@@ -49,6 +49,15 @@ install-python:
 
 install-python-pip:
 	@scripts/install_python_deps_pip.sh
+
+install-beets-deps:
+	@if [ "$(DETECTED_OS)" = "macos" ]; then \
+		brew install ffmpeg keyfinder-cli; \
+	elif [ "$(DETECTED_OS)" = "windows" ]; then \
+		echo "Please install ffmpeg and keyfinder manually, then ensure they are on PATH."; \
+	else \
+		echo "Please install ffmpeg and keyfinder via your distro packages."; \
+	fi
 
 beets-import:
 	@scripts/beets_import.sh
