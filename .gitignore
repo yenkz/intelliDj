@@ -32,6 +32,10 @@ slskd_data/data/
 slskd_data/*.yml
 slskd_data/*.yaml
 
+# Pipeline outputs / inputs
+dj_candidates.csv
+spotify_export.csv
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
