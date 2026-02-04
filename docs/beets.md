@@ -36,9 +36,22 @@ replace:
 Some plugins require external tools:
 
 - `ffmpeg` (for `replaygain`)
-- `keyfinder` binary (for `keyfinder`)
+- Key detection via the `keyfinder` plugin requires either the KeyFinder app or `keyfinder-cli` on your PATH.
 
-Install them via your OS package manager (e.g. Homebrew on macOS, apt on Debian/Ubuntu), or run:
+On macOS, install the KeyFinder app manually from:
+
+- https://www.ibrahimshaath.co.uk/keyfinder/
+
+Then set the binary path explicitly, for example:
+
+```yaml
+keyfinder:
+  bin: /Applications/KeyFinder.app/Contents/MacOS/KeyFinder
+```
+
+If you use `keyfinder-cli`, the binary must be named `keyfinder-cli`.
+
+Install tools via your OS package manager (e.g. Homebrew on macOS, apt on Debian/Ubuntu), or run:
 
 ```bash
 make install-beets-deps

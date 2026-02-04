@@ -52,7 +52,10 @@ install-python-pip:
 
 install-beets-deps:
 	@if [ "$(DETECTED_OS)" = "macos" ]; then \
-		brew install ffmpeg keyfinder-cli; \
+		brew install ffmpeg; \
+		if ! command -v keyfinder-cli >/dev/null 2>&1 && [ ! -x "/Applications/KeyFinder.app/Contents/MacOS/KeyFinder" ]; then \
+			echo "KeyFinder not found. Install the KeyFinder app or keyfinder-cli, then set keyfinder.bin in your beets config."; \
+		fi; \
 	elif [ "$(DETECTED_OS)" = "windows" ]; then \
 		echo "Please install ffmpeg and keyfinder manually, then ensure they are on PATH."; \
 	else \
