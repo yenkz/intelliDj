@@ -11,7 +11,7 @@ else
   DETECTED_OS := linux
 endif
 
-.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists slskd-download
+.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists slskd-download ui
 
 prereqs:
 	@echo "Detected OS: $(DETECTED_OS)"
@@ -76,3 +76,6 @@ playlists:
 
 slskd-download:
 	@poetry run python dj_to_slskd_pipeline.py --csv $(CSV)
+
+ui:
+	@poetry run streamlit run ui/streamlit_app.py

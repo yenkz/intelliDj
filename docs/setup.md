@@ -31,6 +31,12 @@ Run scripts with Poetry:
 poetry run python <script>.py
 ```
 
+Run the Streamlit UI:
+
+```bash
+poetry run streamlit run ui/streamlit_app.py
+```
+
 ## Poetry Basics (Beginner-Friendly)
 
 Poetry creates a project-specific virtual environment so your dependencies don’t conflict with other Python projects.
@@ -71,6 +77,7 @@ Examples:
 - `make install-python-pip` — install Python deps using pip.
 - `make slskd-download CSV=Happy_Funky_House_aka_HFH.csv` — run the download step with a specific CSV.
 - `make playlists CSV=dj_candidates.csv` — generate playlists for a specific CSV.
+- `make ui` — launch the Streamlit UI.
 
 If `make` isn’t installed:
 

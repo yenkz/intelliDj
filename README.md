@@ -68,6 +68,7 @@ DJing tools to select, download, organize, and enrich music for DJ workflows.
 - [Recommendations](docs/recommendations.md)
 - [Traktor automation](docs/traktor.md)
 - [Rekordbox automation](docs/rekordbox.md)
+- [Streamlit UI](docs/ui.md)
 
 ## Contributing
 
