@@ -66,9 +66,15 @@ To queue downloads directly from `dj_candidates.csv`, use the `dj_to_slskd_pipel
    - The API key must have `readwrite` role to enqueue downloads.
 3. Run:
    ```bash
+   set -a && source .env && set +a
    python dj_to_slskd_pipeline.py --csv dj_candidates.csv
    ```
    - The script stops each search after it finds results to clear the “in progress” status and make responses available. Use `--no-stop` to keep searches running.
+   - Use `--dry-run` to preview what would be queued without downloading.
+
+Make sure the API key is also configured in slskd (with `readwrite` role), either:
+- In `slskd_data/slskd.yml` under `api_keys`, then restart the container, or
+- From the slskd web UI (API keys section).
 
 ## Running slskd (Docker)
 
