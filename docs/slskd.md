@@ -64,3 +64,46 @@ make playlists
 - `5030` (HTTP)
 - `5031` (HTTPS, self-signed)
 - `50300` (Soulseek inbound)
+
+## Recommended Configuration (Example)
+
+Below is a safe baseline configuration inspired by typical slskd setups. Replace the placeholders with your own values and keep secrets in `.env`.
+
+```yaml
+web:
+  # web settings omitted for brevity
+
+authentication:
+  disabled: false
+  username: ${SLSKD_USERNAME}
+  password: ${SLSKD_PASSWORD}
+
+api_keys:
+  primary:
+    key: ${SLSKD_API_KEY}
+    role: readwrite
+    cidr: 0.0.0.0/0,::/0
+
+directories:
+  downloads: /app/downloads
+  incomplete: /app/incomplete
+
+soulseek:
+  address: vps.slsknet.org
+  port: 2271
+  username: ${SLSKD_SLSK_USERNAME}
+  password: ${SLSKD_SLSK_PASSWORD}
+
+# Optional: restrict or tune usage
+global:
+  upload:
+    slots: 20
+  download:
+    slots: 500
+```
+
+Notes:
+
+- Keep `authentication.disabled: false` and change the default web UI credentials.
+- Use `readwrite` API keys for automation; avoid exposing the UI publicly.
+- If you don’t need remote config changes, set `SLSKD_REMOTE_CONFIGURATION=false`.
