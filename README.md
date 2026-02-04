@@ -54,6 +54,22 @@ This will:
 2. Copy `.env.example` to `.env` and set your `slskd` + Soulseek credentials.
 3. Start slskd with `docker-compose up -d`.
 
+## Automate slskd Downloads (API)
+
+To queue downloads directly from `dj_candidates.csv`, use the `dj_to_slskd_pipeline.py` script.
+
+1. Install the slskd API client:
+   ```bash
+   pip install slskd-api typing_extensions
+   ```
+2. Ensure `.env` includes `SLSKD_API_KEY` and `SLSKD_HOST`. Leave `SLSKD_URL_BASE` empty unless you have a custom reverse proxy path.
+   - The API key must have `readwrite` role to enqueue downloads.
+3. Run:
+   ```bash
+   python dj_to_slskd_pipeline.py --csv dj_candidates.csv
+   ```
+   - The script stops each search after it finds results to clear the “in progress” status and make responses available. Use `--no-stop` to keep searches running.
+
 ## Running slskd (Docker)
 
 This repo includes a `docker-compose.yml` to run `slskd` locally.
@@ -106,12 +122,8 @@ Tracks are deduplicated and sorted for optimal DJ workflow.
 ## Requirements
 
 - Python 3.6+
-- No API credentials required
+- Docker (desktop and compose) but it's explained above
 
 ## Contributing
 
 Contributions welcome! Please open issues for bugs or feature requests.
-
-## License
-
-[Add license here]
