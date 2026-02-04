@@ -34,12 +34,7 @@ slskd_data/*.yml
 slskd_data/*.yaml
 
 # Pipeline outputs / inputs
-dj_candidates.csv
-dj_candidates*.csv
-spotify_export.csv
-spotify_export*.csv
-tag_enrichment_report.csv
-tag_enrichment_report*.csv
+*.csv
 
 # Logs
 log/

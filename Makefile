@@ -1,4 +1,7 @@
 OS_NAME := $(shell uname -s 2>/dev/null || echo unknown)
+CSV ?= dj_candidates.csv
+LIBRARY_DIR ?= ~/Music/DJ/library
+PLAYLIST_OUT ?= playlists
 
 ifeq ($(OS),Windows_NT)
   DETECTED_OS := windows
@@ -8,7 +11,7 @@ else
   DETECTED_OS := linux
 endif
 
-.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists
+.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists slskd-download
 
 prereqs:
 	@echo "Detected OS: $(DETECTED_OS)"
@@ -69,4 +72,7 @@ beets-import:
 	@scripts/beets_import.sh
 
 playlists:
-	@poetry run python scripts/export_m3u_by_style.py --csv dj_candidates.csv --library-dir ~/Music/DJ/library --out-dir playlists
+	@poetry run python scripts/export_m3u_by_style.py --csv $(CSV) --library-dir $(LIBRARY_DIR) --out-dir $(PLAYLIST_OUT)
+
+slskd-download:
+	@poetry run python dj_to_slskd_pipeline.py --csv $(CSV)
