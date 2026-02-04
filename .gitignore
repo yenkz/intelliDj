@@ -29,12 +29,15 @@ MANIFEST
 # slskd_data (contains credentials)
 slskd_data/
 slskd_data/data/
+slskd_data/data/*.db
 slskd_data/*.yml
 slskd_data/*.yaml
 
 # Pipeline outputs / inputs
 dj_candidates.csv
+dj_candidates*.csv
 spotify_export.csv
+spotify_export*.csv
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -199,6 +202,9 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file. However, if you prefer, 
 #  you could uncomment the following to ignore the entire vscode folder
 # .vscode/
+
+# macOS
+.DS_Store
 
 # Ruff stuff:
 .ruff_cache/
