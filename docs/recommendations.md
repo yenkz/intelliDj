@@ -15,7 +15,17 @@ Recommended tags to write:
 - `isrc`
 - `bpm`, `energy`, `danceability` as custom tags
 
-If you want, I can add a tagging script using `mutagen` that reads `spotify_export.csv` and writes tags to files in `~/Soulseek/downloads/complete`.
+Use the tagging script to re-apply Spotify metadata to downloaded files:
+
+```bash
+poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
+```
+
+Dry-run first:
+
+```bash
+poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --dry-run
+```
 
 ## Improve Match Quality
 

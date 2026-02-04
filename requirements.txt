@@ -3,3 +3,4 @@ beets
 slskd-api
 typing_extensions
 requests
+mutagen

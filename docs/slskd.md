@@ -37,6 +37,14 @@ Notes:
 - Use `--no-stop` to keep searches running.
 - Use `--dry-run` to preview what would be queued without downloading.
 
+## Optional: Spotify CSV Tag Enrichment
+
+After downloads complete, you can re-apply Spotify metadata:
+
+```bash
+poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
+```
+
 ## Ports
 
 - `5030` (HTTP)

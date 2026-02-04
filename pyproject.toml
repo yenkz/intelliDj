@@ -13,6 +13,7 @@ beets = "*"
 slskd-api = "*"
 typing_extensions = "*"
 requests = "*"
+mutagen = "*"
 
 [build-system]
 requires = ["poetry-core"]

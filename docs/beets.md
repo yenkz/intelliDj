@@ -109,6 +109,14 @@ poetry run beet -c ~/.config/beets/config.yaml import -p -s ~/Soulseek/downloads
 poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
 ```
 
+## Optional: Tag Enrichment Before Import
+
+If you want to re-apply Spotify CSV metadata before beets, run:
+
+```bash
+poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
+```
+
 ## Automation
 
 Use the helper script to import new downloads periodically:
