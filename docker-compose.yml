@@ -14,3 +14,4 @@ services:
       - .env
     volumes:
       - ./slskd_data:/app
+      - ~/Soulseek/downloads:/downloads
