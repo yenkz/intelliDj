@@ -2,14 +2,19 @@
 
 DJing tools to select, download, organize, and enrich music for DJ workflows.
 
-## Quickstart
+## Quickstart (macOS, end-to-end)
 
 1. Clone the repo:
    ```bash
    git clone https://github.com/yenkz/intelliDj.git
    cd intelliDj
    ```
-2. Install dependencies:
+2. Install prerequisites (Docker Desktop + Poetry), then start Docker Desktop:
+   ```bash
+   make prereqs
+   ```
+   If anything is missing, install it and re-run `make prereqs`. See `docs/setup.md`.
+3. Install Python dependencies:
    ```bash
    make install-python
    ```
@@ -17,10 +22,35 @@ DJing tools to select, download, organize, and enrich music for DJ workflows.
    ```bash
    make install-python-pip
    ```
-3. Export a Spotify playlist CSV as `spotify_export.csv` (see docs).
-4. Run the CSV pipeline:
+4. Configure slskd and your API key (see `docs/slskd.md`):
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` and set `SLSKD_API_KEY` (see docs for slskd setup).
+5. Start slskd (see `docs/slskd.md`):
+   ```bash
+   docker-compose up -d
+   ```
+6. Export a Spotify playlist CSV as `spotify_export.csv` (see `docs/spotify-export.md`).
+7. Generate download candidates (see `docs/output-format.md`):
    ```bash
    poetry run python csv_to_dj_pipeline.py
+   ```
+8. Download tracks via slskd (see `docs/slskd.md`):
+   ```bash
+   poetry run python dj_to_slskd_pipeline.py --csv dj_candidates.csv
+   ```
+9. (Optional) Re-apply Spotify metadata before beets (see `docs/recommendations.md`):
+   ```bash
+   poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
+   ```
+10. Import into your library with beets (create `~/.config/beets/config.yaml` first; see `docs/beets.md`):
+   ```bash
+   poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
+   ```
+11. (Optional) Normalize loudness in-place (see `docs/recommendations.md`):
+   ```bash
+   scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
    ```
 
 ## Docs
