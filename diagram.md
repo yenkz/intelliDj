@@ -10,8 +10,9 @@ flowchart TD
   F --> G["beets_import.sh<br/>Automated import + move into ~/Music/DJ/library"]
   G --> H["beets (config.yaml)<br/>Tag cleanup, replaygain, BPM/key, rename files"]
   H --> I["Music Library<br/>~/Music/DJ/library"]
-  I --> J["DJ Software<br/>(Traktor / Rekordbox)"]
+  I --> J["export_m3u_by_style.py<br/>Generate style playlists (M3U)"]
+  J --> K["DJ Software<br/>(Traktor / Rekordbox)"]
 
   %% Optional / automation
-  E --> K["beets_import.sh (cron/launchd)<br/>Runs periodic imports"]
+  E --> L["beets_import.sh (cron/launchd)<br/>Runs periodic imports"]
 ```

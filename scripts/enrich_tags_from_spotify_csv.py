@@ -58,20 +58,59 @@ def generate_keys(row: dict) -> set[str]:
 
     return {k for k in keys if k}
 
+def generate_title_keys(row: dict) -> set[str]:
+    track = str(row.get("Track Name", "")).strip()
+    if not track:
+        return set()
+    keys = set()
+    keys.add(normalize(track))
+    track_clean = re.sub(r"\s*-\s*.*(remix|mix|edit|version|rework)\b.*", "", track, flags=re.IGNORECASE)
+    if track_clean and track_clean != track:
+        keys.add(normalize(track_clean))
+    return {k for k in keys if k}
 
-def best_match(file_key: str, candidates: list[tuple[str, dict]], min_score: float):
+
+def best_match(file_key: str, candidates: list[tuple[str, dict]], min_score: float, return_best: bool = False):
     best = None
     best_score = 0.0
+    best_key = None
     for k, row in candidates:
         if k == file_key:
-            return row, 1.0
+            return row, 1.0, k
         score = SequenceMatcher(None, file_key, k).ratio()
         if score > best_score:
             best_score = score
             best = row
+            best_key = k
     if best and best_score >= min_score:
-        return best, best_score
-    return None, 0.0
+        return best, best_score, best_key
+    if return_best:
+        return best, best_score, best_key
+    return None, 0.0, None
+
+
+def extract_artist_title_from_filename(stem: str) -> tuple[str | None, str | None]:
+    name = clean_filename(stem)
+    if " - " in name:
+        artist, title = name.split(" - ", 1)
+        return artist.strip() or None, title.strip() or None
+    return None, name.strip() or None
+
+
+def extract_tags(path: Path) -> tuple[str | None, str | None]:
+    try:
+        audio = MutagenFile(path, easy=True)
+    except Exception:
+        return None, None
+    if not audio or not audio.tags:
+        return None, None
+    artist = None
+    title = None
+    if "artist" in audio.tags:
+        artist = audio.tags.get("artist", [None])[0]
+    if "title" in audio.tags:
+        title = audio.tags.get("title", [None])[0]
+    return artist, title
 
 
 def set_tags_mp3(path: Path, row: dict, custom: bool) -> None:
@@ -173,8 +212,11 @@ def main() -> None:
     parser.add_argument("--input-dir", default=os.path.expanduser("~/Soulseek/downloads/complete"))
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--min-score", type=float, default=0.86)
+    parser.add_argument("--min-score-title", type=float, default=0.78)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--custom-tags", action="store_true", help="Write custom tags like energy/danceability")
+    parser.add_argument("--report", help="Write a CSV report for matches and skips")
+    parser.add_argument("--no-tags", action="store_true", help="Do not use existing file tags for matching")
     args = parser.parse_args()
 
     csv_path = Path(args.csv)
@@ -183,12 +225,16 @@ def main() -> None:
 
     # Build lookup list
     candidates = []
+    title_candidates = []
     with csv_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             keys = generate_keys(row)
             for k in keys:
                 candidates.append((k, row))
+            tkeys = generate_title_keys(row)
+            for k in tkeys:
+                title_candidates.append((k, row))
 
     input_dir = Path(args.input_dir).expanduser()
     files = []
@@ -202,24 +248,112 @@ def main() -> None:
     skipped = 0
     errors = 0
 
+    report_rows = []
+
     for path in files:
-        key = normalize(clean_filename(path.stem))
-        row, score = best_match(key, candidates, args.min_score)
+        artist_tag = title_tag = None
+        if not args.no_tags:
+            artist_tag, title_tag = extract_tags(path)
+
+        # Build keys
+        artist_from_name, title_from_name = extract_artist_title_from_filename(path.stem)
+        artist = artist_tag or artist_from_name
+        title = title_tag or title_from_name
+
+        file_key = normalize(f"{artist} - {title}") if artist and title else normalize(clean_filename(path.stem))
+        title_key = normalize(title) if title else None
+
+        row, score, best_key = best_match(file_key, candidates, args.min_score, return_best=True)
+        match_type = "artist_title"
+
+        if not row and title_key:
+            row, score, best_key = best_match(title_key, title_candidates, args.min_score_title, return_best=True)
+            match_type = "title_only"
+
         if not row:
             skipped += 1
+            report_rows.append({
+                "file": str(path),
+                "match": "none",
+                "score": f"{score:.2f}",
+                "file_key": file_key,
+                "title_key": title_key or "",
+                "best_key": best_key or "",
+                "matched_artist": "",
+                "matched_title": "",
+                "matched_album": "",
+                "reason": "no_match",
+            })
             continue
 
         if args.dry_run:
             print(f"[dry-run] {path.name} -> {row.get('Artist Name(s)')} - {row.get('Track Name')} (score={score:.2f})")
             matched += 1
+            report_rows.append({
+                "file": str(path),
+                "match": match_type,
+                "score": f"{score:.2f}",
+                "file_key": file_key,
+                "title_key": title_key or "",
+                "best_key": best_key or "",
+                "matched_artist": row.get("Artist Name(s)", ""),
+                "matched_title": row.get("Track Name", ""),
+                "matched_album": row.get("Album Name", ""),
+                "reason": "dry_run",
+            })
             continue
 
         try:
             write_tags(path, row, args.custom_tags)
             matched += 1
+            report_rows.append({
+                "file": str(path),
+                "match": match_type,
+                "score": f"{score:.2f}",
+                "file_key": file_key,
+                "title_key": title_key or "",
+                "best_key": best_key or "",
+                "matched_artist": row.get("Artist Name(s)", ""),
+                "matched_title": row.get("Track Name", ""),
+                "matched_album": row.get("Album Name", ""),
+                "reason": "written",
+            })
         except Exception as exc:
             errors += 1
             print(f"[error] {path.name}: {exc}")
+            report_rows.append({
+                "file": str(path),
+                "match": match_type,
+                "score": f"{score:.2f}",
+                "file_key": file_key,
+                "title_key": title_key or "",
+                "best_key": best_key or "",
+                "matched_artist": row.get("Artist Name(s)", ""),
+                "matched_title": row.get("Track Name", ""),
+                "matched_album": row.get("Album Name", ""),
+                "reason": f"error:{exc}",
+            })
+
+    if args.report:
+        report_path = Path(args.report)
+        with report_path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "file",
+                    "match",
+                    "score",
+                    "file_key",
+                    "title_key",
+                    "best_key",
+                    "matched_artist",
+                    "matched_title",
+                    "matched_album",
+                    "reason",
+                ],
+            )
+            writer.writeheader()
+            writer.writerows(report_rows)
 
     print(f"\nDone. matched={matched} skipped={skipped} errors={errors}")
 

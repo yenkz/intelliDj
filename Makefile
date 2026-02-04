@@ -8,7 +8,7 @@ else
   DETECTED_OS := linux
 endif
 
-.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import
+.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists
 
 prereqs:
 	@echo "Detected OS: $(DETECTED_OS)"
@@ -67,3 +67,6 @@ install-keyfinder-cli:
 
 beets-import:
 	@scripts/beets_import.sh
+
+playlists:
+	@poetry run python scripts/export_m3u_by_style.py --csv dj_candidates.csv --library-dir ~/Music/DJ/library --out-dir playlists

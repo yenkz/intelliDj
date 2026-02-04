@@ -27,6 +27,22 @@ Dry-run first:
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --dry-run
 ```
 
+Generate a report (to see why files were skipped and the best match scores):
+
+```bash
+poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --report tag_report.csv
+```
+
+## Traktor/Rekordbox Playlists (Style-Based M3U)
+
+Create style playlists directly from `dj_candidates.csv` and your library files:
+
+```bash
+make playlists
+```
+
+This generates `playlists/*.m3u`, which you can import into Traktor.
+
 ## Improve Match Quality
 
 - Prefer FLAC or 320kbps MP3 in slskd searches.

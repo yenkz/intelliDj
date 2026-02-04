@@ -39,6 +39,10 @@ dj_candidates*.csv
 spotify_export.csv
 spotify_export*.csv
 
+# Playlists (generated)
+playlists/
+*.m3u
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.

@@ -32,6 +32,8 @@ DJing tools to select, download, organize, and enrich music for DJ workflows.
 - [Output format](docs/output-format.md)
 - [Workflow diagram](diagram.md)
 - [Recommendations](docs/recommendations.md)
+- [Traktor automation](docs/traktor.md)
+- [Rekordbox automation](docs/rekordbox.md)
 
 ## Contributing
 

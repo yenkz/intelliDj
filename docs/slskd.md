@@ -45,6 +45,20 @@ After downloads complete, you can re-apply Spotify metadata:
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
 ```
 
+To diagnose skipped matches:
+
+```bash
+poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --report tag_report.csv
+```
+
+## Optional: Traktor/Rekordbox Playlists (M3U)
+
+Generate style-based playlists after imports:
+
+```bash
+make playlists
+```
+
 ## Ports
 
 - `5030` (HTTP)

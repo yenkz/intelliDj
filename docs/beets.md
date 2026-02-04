@@ -117,6 +117,12 @@ If you want to re-apply Spotify CSV metadata before beets, run:
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
 ```
 
+To see why files were skipped, generate a report:
+
+```bash
+poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --report tag_report.csv
+```
+
 ## Automation
 
 Use the helper script to import new downloads periodically:
