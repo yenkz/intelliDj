@@ -48,6 +48,12 @@ This will:
 - Clean track names and infer styles
 - Output `dj_candidates.csv` with tracks sorted by style then BPM
 
+## First Run Checklist
+
+1. Export your Spotify playlist(s) to `spotify_export.csv` via Exportify.
+2. Copy `.env.example` to `.env` and set your `slskd` + Soulseek credentials.
+3. Start slskd with `docker-compose up -d`.
+
 ## Running slskd (Docker)
 
 This repo includes a `docker-compose.yml` to run `slskd` locally.
