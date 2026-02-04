@@ -26,8 +26,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# slskd_data
+# slskd_data (contains credentials)
 slskd_data/
+slskd_data/*.yml
+slskd_data/*.yaml
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
