@@ -102,13 +102,6 @@ import:
 ```bash
 poetry run beet -c ~/.config/beets/config.yaml import -p -s ~/Soulseek/downloads/complete
 ```
-
-## Import
-
-```bash
-poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
-```
-
 ## Optional: Tag Enrichment Before Import
 
 If you want to re-apply Spotify CSV metadata before beets, run:
@@ -117,11 +110,48 @@ If you want to re-apply Spotify CSV metadata before beets, run:
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
 ```
 
-To see why files were skipped, generate a report:
+Matching is more accurate when ISRC and duration are available (the script writes ISRC tags when present in the CSV). You can also generate a report to see why files were skipped:
 
 ```bash
-poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --report tag_report.csv
+poetry run python scripts/enrich_tags_from_spotify_csv.py \
+  --csv spotify_export.csv \
+  --input-dir ~/Soulseek/downloads/complete \
+  --custom-tags \
+  --report tag_enrichment_report.csv
 ```
+
+Optional flags:
+
+- `--duration-tolerance-ms 2000` tighten/loosen duration matching (defaults to 2000ms).
+- `--no-duration` disable duration-based matching if file durations are missing or unreliable.
+## Import
+
+```bash
+poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
+```
+
+## Optional: Loudness Normalization (2-pass loudnorm)
+
+If you want to normalize volume in-place after import, use the provided script:
+
+```bash
+scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
+```
+
+Defaults are set to:
+
+- Integrated loudness (LUFS): `-9`
+- True peak: `-1.0 dB`
+- Loudness range (LRA): `9`
+
+You can override these with environment variables:
+
+```bash
+TARGET_LUFS=-9 TARGET_TP=-1.0 TARGET_LRA=9 \
+  scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
+```
+
+Add `--dry-run` to preview which files would be processed.
 
 ## Automation
 

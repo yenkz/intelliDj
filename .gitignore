@@ -38,6 +38,11 @@ dj_candidates.csv
 dj_candidates*.csv
 spotify_export.csv
 spotify_export*.csv
+tag_enrichment_report.csv
+tag_enrichment_report*.csv
+
+# Logs
+log/
 
 # Playlists (generated)
 playlists/

@@ -54,6 +54,16 @@ This generates `playlists/*.m3u`, which you can import into Traktor.
 - Keep `quiet_fallback: asis` and `fromfilename` in beets so unmatched files still import.
 - Use `scripts/beets_import.sh` on a schedule for automatic cleanup.
 
+## Normalize Loudness (Optional)
+
+After beets import, you can normalize volume levels with ffmpeg’s 2-pass `loudnorm`:
+
+```bash
+scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
+```
+
+Tweak targets via `TARGET_LUFS`, `TARGET_TP`, and `TARGET_LRA`.
+
 ## Keep an Audit Trail
 
 - Save the original `spotify_export.csv` as an archive for future re-tagging.

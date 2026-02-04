@@ -2,8 +2,10 @@
 import argparse
 import csv
 import os
+import sys
 import time
 import uuid
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 import typing
@@ -24,6 +26,37 @@ import slskd_api
 
 DEFAULT_HOST = "http://localhost:5030"
 DEFAULT_URL_BASE = "/api/v0"
+
+
+def _setup_logging() -> None:
+    script_path = Path(__file__).resolve()
+    repo_root = None
+    for parent in [script_path.parent] + list(script_path.parents):
+        if (parent / "pyproject.toml").exists() or (parent / ".git").exists():
+            repo_root = parent
+            break
+    if repo_root is None:
+        repo_root = script_path.parent
+    log_dir = repo_root / "log"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / f"{script_path.stem}.log"
+    log_file = log_path.open("a", encoding="utf-8")
+
+    class Tee:
+        def __init__(self, *streams):
+            self.streams = streams
+
+        def write(self, data):
+            for stream in self.streams:
+                stream.write(data)
+                stream.flush()
+
+        def flush(self):
+            for stream in self.streams:
+                stream.flush()
+
+    sys.stdout = Tee(sys.stdout, log_file)
+    sys.stderr = Tee(sys.stderr, log_file)
 
 
 def build_api_base(host: str) -> str:
@@ -300,4 +333,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    _setup_logging()
     main()
