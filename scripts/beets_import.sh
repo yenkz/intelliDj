@@ -14,5 +14,5 @@ touch "$LOCK"
 
 # Only run if there are audio files
 if find "$SRC" -type f \( -iname "*.mp3" -o -iname "*.flac" -o -iname "*.wav" -o -iname "*.aiff" \) | grep -q .; then
-  poetry run beet -c "$CFG" import -s "$SRC"
+  poetry run beet -c "$CFG" import -q -s "$SRC"
 fi

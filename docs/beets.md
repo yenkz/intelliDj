@@ -57,6 +57,23 @@ Install tools via your OS package manager (e.g. Homebrew on macOS, apt on Debian
 make install-beets-deps
 ```
 
+### keyfinder-cli (macOS)
+
+To build and install `keyfinder-cli` from source (macOS):
+
+```bash
+make install-keyfinder-cli
+```
+
+This uses `scripts/install_keyfinder_cli.sh` and installs the binary to `$(brew --prefix)/bin/keyfinder-cli`.
+
+Set your beets config:
+
+```yaml
+keyfinder:
+  bin: /opt/homebrew/bin/keyfinder-cli
+```
+
 ## Plugin Checklist
 
 Verify your plugins are available:
@@ -74,15 +91,16 @@ If you want fewer prompts, set:
 
 ```yaml
 import:
+  quiet: yes
   timid: no
   default_action: apply
   quiet_fallback: skip
 ```
 
-## Dry-run
+## Dry-run (preview)
 
 ```bash
-poetry run beet -c ~/.config/beets/config.yaml import -n -s ~/Soulseek/downloads/complete
+poetry run beet -c ~/.config/beets/config.yaml import -p -s ~/Soulseek/downloads/complete
 ```
 
 ## Import

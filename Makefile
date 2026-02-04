@@ -8,7 +8,7 @@ else
   DETECTED_OS := linux
 endif
 
-.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps beets-import
+.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import
 
 prereqs:
 	@echo "Detected OS: $(DETECTED_OS)"
@@ -61,6 +61,9 @@ install-beets-deps:
 	else \
 		echo "Please install ffmpeg and keyfinder via your distro packages."; \
 	fi
+
+install-keyfinder-cli:
+	@scripts/install_keyfinder_cli.sh
 
 beets-import:
 	@scripts/beets_import.sh

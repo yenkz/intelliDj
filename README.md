@@ -30,6 +30,8 @@ DJing tools to select, download, organize, and enrich music for DJ workflows.
 - [slskd (Docker + API downloads)](docs/slskd.md)
 - [Beets cleanup workflow](docs/beets.md)
 - [Output format](docs/output-format.md)
+- [Workflow diagram](diagram.md)
+- [Recommendations](docs/recommendations.md)
 
 ## Contributing
 
