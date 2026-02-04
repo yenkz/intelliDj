@@ -26,9 +26,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Docker Slsk
+# slskd_data
 slskd_data/
-
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

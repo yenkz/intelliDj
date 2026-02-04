@@ -43,10 +43,9 @@
 # directories:
 #   incomplete: ~
 #   downloads: ~
-# shares:
-#   directories:
-#     - ~
-#   filters:
+#shares:
+# directories:
+#    - /downloads#   filters:
 #     - \.ini$
 #     - Thumbs.db$
 #     - \.DS_Store$
@@ -135,33 +134,20 @@
 #   search:
 #     request:
 #       - ^.{1,2}$
-# web:
-#   port: 5030
-#   ip_address: 0.0.0.0,[::]
-#   socket: ~
-#   https:
-#     disabled: false
-#     port: 5031
-#     ip_address: 0.0.0.0,[::]
-#     force: false
-#     certificate:
-#       pfx: ~
-#       password: ~
-#   url_base: /
-#   content_path: wwwroot
-#   logging: false
-#   authentication:
-#     disabled: false
-#     username: slskd
-#     password: slskd
-#     jwt:
-#       key: ~
-#       ttl: 604800000
-#     api_keys:
-#       my_api_key:
-#         key: <some example string between 16 and 255 characters>
-#         role: readonly # readonly, readwrite, administrator
-#         cidr: 0.0.0.0/0,::/0
+web:
+  [...]
+authentication:
+  disabled: false
+  username: yenkz
+  password: Himura123!!
+# jwt:
+# key: ~
+# ttl: 604800000
+api_keys:
+  my_api_key:
+    key: yencoyencoyenco1234567890
+    role: readonly
+    cidr: 0.0.0.0/0,::/0
 # retention:
 #   search: 10080 # 7 days, in minutes
 #   transfers:
@@ -192,11 +178,11 @@
 #     password: slskd
 # feature:
 #   swagger: false
-# soulseek:
-#   address: vps.slsknet.org
-#   port: 2271
-#   username: ~
-#   password: ~
+soulseek:
+  address: vps.slsknet.org
+  port: 2271
+  username: yenkz
+  password: Himura123!!
 #   description: |
 #     A slskd user. https://github.com/slskd/slskd
 #   picture: path/to/slsk-profile-picture.jpg
