@@ -28,6 +28,7 @@ MANIFEST
 
 # slskd_data (contains credentials)
 slskd_data/
+slskd_data/data/
 slskd_data/*.yml
 slskd_data/*.yaml
 
