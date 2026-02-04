@@ -8,7 +8,7 @@ else
   DETECTED_OS := linux
 endif
 
-.PHONY: prereqs install-docker install-poetry install-python
+.PHONY: prereqs install-docker install-poetry install-python install-python-pip beets-import
 
 prereqs:
 	@echo "Detected OS: $(DETECTED_OS)"
@@ -46,3 +46,9 @@ install-poetry:
 
 install-python:
 	@scripts/install_python_deps.sh
+
+install-python-pip:
+	@scripts/install_python_deps_pip.sh
+
+beets-import:
+	@scripts/beets_import.sh

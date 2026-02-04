@@ -13,6 +13,10 @@ DJing tools to select, download, organize, and enrich music for DJ workflows.
    ```bash
    make install-python
    ```
+   (Uses Poetry under the hood.) Or use pip-only:
+   ```bash
+   make install-python-pip
+   ```
 3. Export a Spotify playlist CSV as `spotify_export.csv` (see docs).
 4. Run the CSV pipeline:
    ```bash

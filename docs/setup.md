@@ -3,20 +3,23 @@
 ## Requirements
 
 - Python 3.10+
-- Poetry (installed automatically by `make install-python` or manually with `pip install poetry`)
 - Docker Desktop or Docker Engine + Compose (for slskd)
 
-## Makefile Helpers
+## Dependency Installation
+
+Poetry (recommended):
 
 ```bash
-make prereqs
-make install-docker
 make install-python
 ```
 
-## Poetry
+Pip-only (fallback):
 
-Install dependencies:
+```bash
+make install-python-pip
+```
+
+If you want to run Poetry directly:
 
 ```bash
 poetry install
@@ -26,4 +29,13 @@ Run scripts with Poetry:
 
 ```bash
 poetry run python <script>.py
+```
+
+## Makefile Helpers
+
+```bash
+make prereqs
+make install-docker
+make install-python
+make install-python-pip
 ```
