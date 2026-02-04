@@ -22,7 +22,12 @@ IntelliDj processes your Spotify playlists (exported manually) to generate curat
    cd intelliDj
    ```
 
-2. **Install dependencies (Poetry)**:
+2. **Install dependencies** (recommended):
+   ```bash
+   make install-python
+   ```
+
+Or install via Poetry directly:
    ```bash
    poetry install
    ```
@@ -37,6 +42,12 @@ Run scripts with Poetry:
 poetry run python <script>.py
 ```
 
+Makefile helpers:
+```bash
+make prereqs
+make install-docker
+make install-python
+```
 
 ## Spotify Export Setup
 
@@ -68,10 +79,7 @@ This will:
 
 To queue downloads directly from `dj_candidates.csv`, use the `dj_to_slskd_pipeline.py` script.
 
-1. Install the slskd API client:
-   ```bash
-   pip install slskd-api typing_extensions
-   ```
+1. Ensure dependencies are installed (`make install-python` or `poetry install`).
 2. Ensure `.env` includes `SLSKD_API_KEY` and `SLSKD_HOST`. Leave `SLSKD_URL_BASE` empty unless you have a custom reverse proxy path.
    - The API key must have `readwrite` role to enqueue downloads.
 3. Run:
@@ -86,6 +94,44 @@ Make sure the API key is also configured in slskd (with `readwrite` role), eithe
 - In `slskd_data/slskd.yml` under `api_keys`, then restart the container, or
 - From the slskd web UI (API keys section).
 
+## Beets Cleanup Workflow
+
+This workflow imports downloaded tracks, fixes tags, and moves files into a flat library structure.
+
+1. Create a beets config at `~/.config/beets/config.yaml`:
+   ```yaml
+   directory: ~/Music
+   library: ~/.config/beets/library.db
+
+   import:
+     move: true
+     copy: false
+     write: true
+     resume: ask
+     timid: false
+     autotag: true
+     quiet_fallback: skip
+     default_action: apply
+     log: ~/.config/beets/import.log
+
+   paths:
+     default: $artist - $title
+     singleton: $artist - $title
+
+   replace:
+     '[\\/]': '_'
+     '^\\.+': '_'
+     '\\s+$': ''
+   ```
+2. Dry-run import (recommended):
+   ```bash
+   poetry run beet -c ~/.config/beets/config.yaml import -n -s ~/Soulseek/downloads/complete
+   ```
+3. Import and clean:
+   ```bash
+   poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
+   ```
+
 ## Running slskd (Docker)
 
 This repo includes a `docker-compose.yml` to run `slskd` locally.
@@ -93,6 +139,7 @@ This repo includes a `docker-compose.yml` to run `slskd` locally.
 1. Install Docker Desktop (which includes Docker Compose):
    - macOS/Windows: download and install Docker Desktop from the official Docker site.
    - Linux: install Docker Engine and the `docker-compose` plugin from your distro packages.
+   - You can also run `make install-docker` (macOS via Homebrew; Windows will show the manual steps).
 2. Ensure Docker is running.
 3. Start the container:
    ```bash
@@ -137,8 +184,9 @@ Tracks are deduplicated and sorted for optimal DJ workflow.
 
 ## Requirements
 
-- Python 3.6+
+- Python 3.10+
 - Docker (desktop and compose) but it's explained above
+- Poetry (installed automatically by `make install-python` or manually with `pip install poetry`)
 
 ## Contributing
 
