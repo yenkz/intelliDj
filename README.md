@@ -22,10 +22,20 @@ IntelliDj processes your Spotify playlists (exported manually) to generate curat
    cd intelliDj
    ```
 
-2. **Install dependencies**:
+2. **Install dependencies (Poetry)**:
    ```bash
-   pip install pandas
+   poetry install
    ```
+
+If you don’t have Poetry yet:
+```bash
+pip install poetry
+```
+
+Run scripts with Poetry:
+```bash
+poetry run python <script>.py
+```
 
 
 ## Spotify Export Setup
@@ -40,7 +50,7 @@ To access your Spotify data without the API, export your playlists as CSV using 
 
 Run the pipeline script:
 ```bash
-python csv_to_dj_pipeline.py
+poetry run python csv_to_dj_pipeline.py
 ```
 
 This will:
@@ -67,7 +77,7 @@ To queue downloads directly from `dj_candidates.csv`, use the `dj_to_slskd_pipel
 3. Run:
    ```bash
    set -a && source .env && set +a
-   python dj_to_slskd_pipeline.py --csv dj_candidates.csv
+   poetry run python dj_to_slskd_pipeline.py --csv dj_candidates.csv
    ```
    - The script stops each search after it finds results to clear the “in progress” status and make responses available. Use `--no-stop` to keep searches running.
    - Use `--dry-run` to preview what would be queued without downloading.

@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "intellidj"
+version = "0.1.0"
+description = "DJing tools to select, download, organize and enrich music"
+authors = ["yenkz <cpecile@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pandas = "*"
+beets = "*"
+slskd-api = "*"
+typing_extensions = "*"
+requests = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
