@@ -8,8 +8,8 @@ DJing tools to select, download, organize, and enrich music for DJ workflows.
 
 The following software needs to be installed before following the steps below:
 
-- Git
-- MacOS's developer tools (xcode)
+- [Git](https://git-scm.com/install/mac)
+- MacOS's developer tools ([xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12))
 
 ### Steps to follow
 
