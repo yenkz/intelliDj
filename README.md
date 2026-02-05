@@ -4,6 +4,15 @@ DJing tools to select, download, organize, and enrich music for DJ workflows.
 
 ## Quickstart (macOS, end-to-end)
 
+### Pre-requisites (for non-tech-geek users)
+
+The following software needs to be installed before following the steps below:
+
+- Git
+- MacOS's developer tools (xcode)
+
+### Steps to follow
+
 1. Clone the repo:
    ```bash
    git clone https://github.com/yenkz/intelliDj.git
