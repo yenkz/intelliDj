@@ -2,6 +2,7 @@
 import argparse
 import csv
 import os
+import random
 import sys
 import time
 import uuid
@@ -27,6 +28,9 @@ import slskd_api
 
 DEFAULT_HOST = "http://localhost:5030"
 DEFAULT_URL_BASE = "/api/v0"
+DEFAULT_RETRIES = int(os.getenv("SLSKD_RETRY_ATTEMPTS", "3"))
+DEFAULT_RETRY_BACKOFF = float(os.getenv("SLSKD_RETRY_BACKOFF", "0.5"))
+DEFAULT_RETRY_MAX_DELAY = float(os.getenv("SLSKD_RETRY_MAX_DELAY", "8"))
 
 
 def _setup_logging() -> None:
@@ -72,10 +76,50 @@ def build_api_base(host: str) -> str:
     return base
 
 
+def _should_retry_http(exc: Exception) -> bool:
+    if isinstance(exc, requests.HTTPError):
+        response = exc.response
+        status = response.status_code if response is not None else None
+        if status is None:
+            return True
+        if status in (408, 409, 429):
+            return True
+        return 500 <= status < 600
+    if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
+        return True
+    return True
+
+
+def retry_with_backoff(
+    func,
+    *,
+    label: str,
+    retries: int = DEFAULT_RETRIES,
+    base_delay: float = DEFAULT_RETRY_BACKOFF,
+    max_delay: float = DEFAULT_RETRY_MAX_DELAY,
+    should_retry=_should_retry_http,
+):
+    attempt = 0
+    while True:
+        try:
+            return func()
+        except Exception as exc:
+            if attempt >= retries or (should_retry and not should_retry(exc)):
+                raise
+            delay = min(max_delay, base_delay * (2 ** attempt))
+            delay += random.uniform(0, base_delay)
+            print(f"[warn] {label} failed ({exc}); retrying in {delay:.1f}s")
+            time.sleep(delay)
+            attempt += 1
+
+
 def fetch_search_responses(base_url: str, api_key: str, search_id: str) -> List[Dict]:
     url = f"{base_url}/api/v0/searches/{search_id}/responses"
     headers = {"X-API-KEY": api_key}
-    r = requests.get(url, headers=headers, timeout=10)
+    r = retry_with_backoff(
+        lambda: requests.get(url, headers=headers, timeout=10),
+        label="requests.get search_responses",
+    )
     if r.status_code == 404:
         return []
     r.raise_for_status()
@@ -190,12 +234,15 @@ def main() -> None:
 
     for query in searches:
         search_id = str(uuid.uuid4())
-        search_resp = slskd.searches.search_text(
-            searchText=query,
-            id=search_id,
-            fileLimit=args.file_limit,
-            responseLimit=args.response_limit,
-            searchTimeout=args.search_timeout_ms,
+        search_resp = retry_with_backoff(
+            lambda: slskd.searches.search_text(
+                searchText=query,
+                id=search_id,
+                fileLimit=args.file_limit,
+                responseLimit=args.response_limit,
+                searchTimeout=args.search_timeout_ms,
+            ),
+            label="slskd.searches.search_text",
         )
         # slskd may return its own token/id; prefer them if present
         search_token = None
@@ -228,12 +275,18 @@ def main() -> None:
             if responses:
                 break
 
-            state_obj = slskd.searches.state(state_id, includeResponses=True)
+            state_obj = retry_with_backoff(
+                lambda: slskd.searches.state(state_id, includeResponses=True),
+                label="slskd.searches.state",
+            )
             if isinstance(state_obj, dict):
                 # If we have counts but no inline responses yet, stop the search to finalize results.
                 if (not args.no_stop) and (not stop_issued) and state_obj.get("responseCount", 0) and not state_obj.get("isComplete", False):
                     try:
-                        slskd.searches.stop(state_id)
+                        retry_with_backoff(
+                            lambda: slskd.searches.stop(state_id),
+                            label="slskd.searches.stop",
+                        )
                         stop_issued = True
                     except Exception:
                         pass
@@ -244,7 +297,10 @@ def main() -> None:
                 # If counts exist but no inline responses, try responses endpoint with id/token
                 if state_obj.get("responseCount", 0):
                     try:
-                        raw_responses = slskd.searches.search_responses(state_id)
+                        raw_responses = retry_with_backoff(
+                            lambda: slskd.searches.search_responses(state_id),
+                            label="slskd.searches.search_responses",
+                        )
                         responses = normalize_responses(raw_responses)
                     except Exception:
                         raw_responses = None
@@ -255,7 +311,10 @@ def main() -> None:
                     # As a fallback, try state/responses using the alternate identifier
                     if search_token != state_id:
                         try:
-                            alt_state = slskd.searches.state(search_token, includeResponses=True)
+                            alt_state = retry_with_backoff(
+                                lambda: slskd.searches.state(search_token, includeResponses=True),
+                                label="slskd.searches.state (alt)",
+                            )
                             if isinstance(alt_state, dict):
                                 responses = normalize_responses(alt_state.get("responses"))
                                 state_obj = alt_state
@@ -263,7 +322,10 @@ def main() -> None:
                             pass
                         if not responses:
                             try:
-                                alt_responses = slskd.searches.search_responses(search_token)
+                                alt_responses = retry_with_backoff(
+                                    lambda: slskd.searches.search_responses(search_token),
+                                    label="slskd.searches.search_responses (alt)",
+                                )
                                 responses = normalize_responses(alt_responses)
                             except Exception:
                                 pass
@@ -276,7 +338,10 @@ def main() -> None:
         # If completed but responses still empty, try fallback endpoints once.
         if not responses:
             try:
-                raw_responses = slskd.searches.search_responses(state_id)
+                raw_responses = retry_with_backoff(
+                    lambda: slskd.searches.search_responses(state_id),
+                    label="slskd.searches.search_responses (final)",
+                )
                 responses = normalize_responses(raw_responses)
             except Exception:
                 raw_responses = None
@@ -321,14 +386,20 @@ def main() -> None:
             queued += 1
             continue
 
-        ok = slskd.transfers.enqueue(user, payload)
+        ok = retry_with_backoff(
+            lambda: slskd.transfers.enqueue(user, payload),
+            label="slskd.transfers.enqueue",
+        )
         if ok:
             print(f"[queued] {user}: {payload[0]['filename']}")
             queued += 1
             # Stop the search to clear "in progress" status in UI
             if not args.no_stop:
                 try:
-                    slskd.searches.stop(state_id)
+                    retry_with_backoff(
+                        lambda: slskd.searches.stop(state_id),
+                        label="slskd.searches.stop (post enqueue)",
+                    )
                 except Exception:
                     pass
         else:
