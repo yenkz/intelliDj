@@ -5,3 +5,5 @@ typing_extensions
 requests
 mutagen
 streamlit
+pytest
+pytest-cov

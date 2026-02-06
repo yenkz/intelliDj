@@ -35,8 +35,6 @@ def _setup_logging() -> None:
     sys.stderr = Tee(sys.stderr, log_file)
 
 
-_setup_logging()
-
 INPUT_FILE = "spotify_export.csv"
 OUTPUT_FILE = "dj_candidates.csv"
 
@@ -76,46 +74,55 @@ def infer_style(genres, bpm, energy):
         return "Peak House"
     return "House / Groovy"
 
-# ---------------- MAIN ----------------
 
-df = pd.read_csv(INPUT_FILE)
+def build_candidates_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    rows = []
 
-print("📄 Columnas detectadas:")
-print(df.columns.tolist())
+    for _, row in df.iterrows():
+        artist_raw = row["Artist Name(s)"]
+        artist = normalize_artist(artist_raw)
 
-rows = []
+        track = clean_track_name(row["Track Name"])
 
-for _, row in df.iterrows():
-    artist_raw = row["Artist Name(s)"]
-    artist = normalize_artist(artist_raw)
+        bpm = round(row["Tempo"])
+        energy = round(row["Energy"], 2)
+        danceability = round(row["Danceability"], 2)
+        genres = row["Genres"]
+        label = row["Record Label"]
 
-    track = clean_track_name(row["Track Name"])
+        style = infer_style(genres, bpm, energy)
 
-    bpm = round(row["Tempo"])
-    energy = round(row["Energy"], 2)
-    danceability = round(row["Danceability"], 2)
-    genres = row["Genres"]
-    label = row["Record Label"]
+        rows.append({
+            "artist": artist,
+            "track": track,
+            "bpm": bpm,
+            "energy": energy,
+            "danceability": danceability,
+            "style": style,
+            "label": label,
+            "genres": genres,
+            "search_string": f"{artist} - {track}",
+        })
 
-    style = infer_style(genres, bpm, energy)
+    out = pd.DataFrame(rows)
 
-    rows.append({
-        "artist": artist,
-        "track": track,
-        "bpm": bpm,
-        "energy": energy,
-        "danceability": danceability,
-        "style": style,
-        "label": label,
-        "genres": genres,
-        "search_string": f"{artist} - {track}"
-    })
+    out.drop_duplicates(subset=["search_string"], inplace=True)
+    out.sort_values(by=["style", "bpm"], inplace=True)
+    return out
 
-out = pd.DataFrame(rows)
+def main(input_file: str = INPUT_FILE, output_file: str = OUTPUT_FILE) -> None:
+    df = pd.read_csv(input_file)
 
-out.drop_duplicates(subset=["search_string"], inplace=True)
-out.sort_values(by=["style", "bpm"], inplace=True)
-out.to_csv(OUTPUT_FILE, index=False)
+    print("📄 Columnas detectadas:")
+    print(df.columns.tolist())
 
-print(f"✅ Generado {OUTPUT_FILE}")
-print(f"🎧 Tracks procesados: {len(out)}")
+    out = build_candidates_dataframe(df)
+    out.to_csv(output_file, index=False)
+
+    print(f"✅ Generado {output_file}")
+    print(f"🎧 Tracks procesados: {len(out)}")
+
+
+if __name__ == "__main__":
+    _setup_logging()
+    main()

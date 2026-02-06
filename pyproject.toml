@@ -16,6 +16,22 @@ requests = "*"
 mutagen = "*"
 streamlit = "*"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+
+[tool.coverage.run]
+source = ["."]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
