@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple
 
 import typing
 import requests
+from dotenv import load_dotenv
 
 # slskd_api expects typing.NotRequired (py3.11+). Provide a shim for py3.10.
 if not hasattr(typing, "NotRequired"):
@@ -57,6 +58,11 @@ def _setup_logging() -> None:
 
     sys.stdout = Tee(sys.stdout, log_file)
     sys.stderr = Tee(sys.stderr, log_file)
+
+
+def _load_env() -> None:
+    env_path = os.getenv("INTELLIDJ_ENV", ".env")
+    load_dotenv(env_path, override=False)
 
 
 def build_api_base(host: str) -> str:
@@ -334,4 +340,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     _setup_logging()
+    _load_env()
     main()

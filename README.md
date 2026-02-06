@@ -46,23 +46,19 @@ The following software needs to be installed before following the steps below:
    ```bash
    poetry run python csv_to_dj_pipeline.py
    ```
-8. Load your `.env` into the current shell:
-   ```bash
-   set -a && source .env && set +a
-   ```
-9. Download tracks via slskd (see [slskd setup](docs/slskd.md)):
+8. Download tracks via slskd (see [slskd setup](docs/slskd.md)):
    ```bash
    poetry run python dj_to_slskd_pipeline.py --csv dj_candidates.csv
    ```
-10. (Optional) Re-apply Spotify metadata before beets (see [Recommendations](docs/recommendations.md)):
+9. (Optional) Re-apply Spotify metadata before beets (see [Recommendations](docs/recommendations.md)):
    ```bash
    poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
    ```
-11. Import into your library with beets (create `~/.config/beets/config.yaml` first; see [Beets cleanup workflow](docs/beets.md)):
+10. Import into your library with beets (create `~/.config/beets/config.yaml` first; see [Beets cleanup workflow](docs/beets.md)):
    ```bash
    poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
    ```
-12. (Optional) Normalize loudness in-place (see [Recommendations](docs/recommendations.md)):
+11. (Optional) Normalize loudness in-place (see [Recommendations](docs/recommendations.md)):
    ```bash
    scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
    ```
