@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 import re
 import sys
@@ -35,8 +36,8 @@ def _setup_logging() -> None:
     sys.stderr = Tee(sys.stderr, log_file)
 
 
-INPUT_FILE = "spotify_export.csv"
-OUTPUT_FILE = "dj_candidates.csv"
+DEFAULT_INPUT_FILE = "spotify_export.csv"
+DEFAULT_OUTPUT_FILE = "dj_candidates.csv"
 
 # ---------------- HELPERS ----------------
 
@@ -110,8 +111,39 @@ def build_candidates_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     out.sort_values(by=["style", "bpm"], inplace=True)
     return out
 
-def main(input_file: str = INPUT_FILE, output_file: str = OUTPUT_FILE) -> None:
+def main(input_file: str, output_file: str) -> None:
     df = pd.read_csv(input_file)
+
+    required_columns = [
+        "Artist Name(s)",
+        "Track Name",
+        "Tempo",
+        "Energy",
+        "Danceability",
+        "Genres",
+        "Record Label",
+    ]
+    missing = [col for col in required_columns if col not in df.columns]
+    if missing:
+        raise SystemExit(f"Missing required columns: {', '.join(missing)}")
+
+    df = df.copy()
+    for col in ["Artist Name(s)", "Track Name", "Genres", "Record Label"]:
+        df[col] = df[col].fillna("").astype(str)
+
+    for col in ["Tempo", "Energy", "Danceability"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+        invalid = df[col].isna().sum()
+        if invalid:
+            print(f"⚠️  {invalid} rows have invalid {col}; defaulting to 0")
+        df[col] = df[col].fillna(0)
+
+    empty_artist = df["Artist Name(s)"].str.strip() == ""
+    empty_track = df["Track Name"].str.strip() == ""
+    if (empty_artist | empty_track).any():
+        dropped = int((empty_artist | empty_track).sum())
+        print(f"⚠️  Dropping {dropped} rows missing artist or track")
+        df = df[~(empty_artist | empty_track)]
 
     print("📄 Columnas detectadas:")
     print(df.columns.tolist())
@@ -125,4 +157,8 @@ def main(input_file: str = INPUT_FILE, output_file: str = OUTPUT_FILE) -> None:
 
 if __name__ == "__main__":
     _setup_logging()
-    main()
+    parser = argparse.ArgumentParser(description="Generate dj_candidates.csv from a Spotify export")
+    parser.add_argument("--input", default=DEFAULT_INPUT_FILE, help="Path to spotify_export.csv")
+    parser.add_argument("--output", default=DEFAULT_OUTPUT_FILE, help="Path to dj_candidates.csv")
+    args = parser.parse_args()
+    main(args.input, args.output)
