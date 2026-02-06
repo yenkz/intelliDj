@@ -37,6 +37,14 @@ Run the Streamlit UI:
 poetry run streamlit run ui/streamlit_app.py
 ```
 
+## End-to-End Dry Run
+
+Use the helper script to dry-run the pipeline without downloading or writing tags:
+
+```bash
+scripts/dry_run_pipeline.sh --csv spotify_export.csv
+```
+
 ## Poetry Basics (Beginner-Friendly)
 
 Poetry creates a project-specific virtual environment so your dependencies don’t conflict with other Python projects.
