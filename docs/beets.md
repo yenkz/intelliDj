@@ -102,12 +102,20 @@ import:
 ```bash
 poetry run beet -c ~/.config/beets/config.yaml import -p -s ~/Soulseek/downloads/complete
 ```
+PowerShell:
+```powershell
+poetry run beet -c "$HOME/.config/beets/config.yaml" import -p -s "$HOME/Soulseek/downloads/complete"
+```
 ## Optional: Tag Enrichment Before Import
 
 If you want to re-apply Spotify CSV metadata before beets, run:
 
 ```bash
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
+```
+PowerShell:
+```powershell
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --custom-tags
 ```
 
 Matching is more accurate when ISRC and duration are available (the script writes ISRC tags when present in the CSV). You can also generate a report to see why files were skipped:
@@ -119,6 +127,10 @@ poetry run python scripts/enrich_tags_from_spotify_csv.py \
   --custom-tags \
   --report tag_enrichment_report.csv
 ```
+PowerShell:
+```powershell
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --custom-tags --report tag_enrichment_report.csv
+```
 
 Optional flags:
 
@@ -129,6 +141,10 @@ Optional flags:
 ```bash
 poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
 ```
+PowerShell:
+```powershell
+poetry run beet -c "$HOME/.config/beets/config.yaml" import -s "$HOME/Soulseek/downloads/complete"
+```
 
 ## Optional: Loudness Normalization (2-pass loudnorm)
 
@@ -136,6 +152,10 @@ If you want to normalize volume in-place after import, use the provided script:
 
 ```bash
 scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
+```
+PowerShell:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\normalize_loudness.ps1 -InputDir "$HOME/Music/DJ/library"
 ```
 
 Defaults are set to:
@@ -150,6 +170,11 @@ You can override these with environment variables:
 TARGET_LUFS=-9 TARGET_TP=-1.0 TARGET_LRA=9 \
   scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
 ```
+PowerShell:
+```powershell
+$env:TARGET_LUFS='-9'; $env:TARGET_TP='-1.0'; $env:TARGET_LRA='9'
+powershell -ExecutionPolicy Bypass -File .\scripts\normalize_loudness.ps1 -InputDir "$HOME/Music/DJ/library"
+```
 
 Add `--dry-run` to preview which files would be processed.
 
@@ -159,6 +184,10 @@ Use the helper script to import new downloads periodically:
 
 ```bash
 scripts/beets_import.sh
+```
+PowerShell:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\beets_import.ps1
 ```
 
 ### macOS (launchd)
@@ -199,3 +228,10 @@ Add:
 ```
 */5 * * * * /bin/sh /Users/cpecile/Code/intelliDj/scripts/beets_import.sh
 ```
+
+### Windows (Task Scheduler)
+
+Create a Task Scheduler task that runs every 5 minutes with:
+
+- Program/script: `powershell.exe`
+- Arguments: `-ExecutionPolicy Bypass -File C:\path\to\intelliDj\scripts\beets_import.ps1`

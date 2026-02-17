@@ -48,10 +48,18 @@ install-poetry:
 	@python -m pip install poetry
 
 install-python:
-	@scripts/install_python_deps.sh
+	@if [ "$(DETECTED_OS)" = "windows" ]; then \
+		powershell -ExecutionPolicy Bypass -File .\\scripts\\install_python_deps.ps1; \
+	else \
+		scripts/install_python_deps.sh; \
+	fi
 
 install-python-pip:
-	@scripts/install_python_deps_pip.sh
+	@if [ "$(DETECTED_OS)" = "windows" ]; then \
+		powershell -ExecutionPolicy Bypass -File .\\scripts\\install_python_deps_pip.ps1; \
+	else \
+		scripts/install_python_deps_pip.sh; \
+	fi
 
 install-beets-deps:
 	@if [ "$(DETECTED_OS)" = "macos" ]; then \
@@ -69,7 +77,11 @@ install-keyfinder-cli:
 	@scripts/install_keyfinder_cli.sh
 
 beets-import:
-	@scripts/beets_import.sh
+	@if [ "$(DETECTED_OS)" = "windows" ]; then \
+		powershell -ExecutionPolicy Bypass -File .\\scripts\\beets_import.ps1; \
+	else \
+		scripts/beets_import.sh; \
+	fi
 
 playlists:
 	@poetry run python scripts/export_m3u_by_style.py --csv $(CSV) --library-dir $(LIBRARY_DIR) --out-dir $(PLAYLIST_OUT)

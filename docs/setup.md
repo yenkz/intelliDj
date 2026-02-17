@@ -5,6 +5,8 @@
 - Python 3.10+
 - Docker Desktop or Docker Engine + Compose (for slskd)
 
+For a copy/paste native Windows flow, use the dedicated guide: [Windows 11 PowerShell quickstart](windows.md).
+
 ## Dependency Installation
 
 Poetry (recommended):
@@ -13,10 +15,22 @@ Poetry (recommended):
 make install-python
 ```
 
+Windows PowerShell (recommended on Windows):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install_python_deps.ps1
+```
+
 Pip-only (fallback):
 
 ```bash
 make install-python-pip
+```
+
+Windows PowerShell pip-only:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install_python_deps_pip.ps1
 ```
 
 If you want to run Poetry directly:
@@ -43,6 +57,12 @@ Use the helper script to dry-run the pipeline without downloading or writing tag
 
 ```bash
 scripts/dry_run_pipeline.sh --csv spotify_export.csv
+```
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\dry_run_pipeline.ps1 -Csv spotify_export.csv
 ```
 
 ## Poetry Basics (Beginner-Friendly)
@@ -91,3 +111,4 @@ If `make` isn’t installed:
 
 - macOS: install Command Line Tools with `xcode-select --install` (or `brew install make`).
 - Linux: install `make` via your package manager.
+- Windows: use the PowerShell scripts in `scripts/*.ps1` instead of `make`.

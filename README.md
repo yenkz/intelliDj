@@ -39,7 +39,7 @@ The following software needs to be installed before following the steps below:
    Edit `.env` and set `SLSKD_API_KEY` (see docs for slskd setup).
 5. Start slskd (see [slskd setup](docs/slskd.md)):
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 6. Export a Spotify playlist CSV as `spotify_export.csv` (see [Spotify export](docs/spotify-export.md)).
 7. Generate download candidates (see [Output format](docs/output-format.md)):
@@ -63,9 +63,14 @@ The following software needs to be installed before following the steps below:
    scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
    ```
 
+## Quickstart (Windows 11 + PowerShell, end-to-end)
+
+Use the dedicated guide: [Windows 11 PowerShell quickstart](docs/windows.md).
+
 ## Docs
 
 - [Setup and prerequisites](docs/setup.md)
+- [Windows 11 PowerShell quickstart](docs/windows.md)
 - [Spotify export](docs/spotify-export.md)
 - [slskd (Docker + API downloads)](docs/slskd.md)
 - [Beets cleanup workflow](docs/beets.md)

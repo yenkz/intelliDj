@@ -5,7 +5,7 @@
 1. Install Docker Desktop (macOS/Windows) or Docker Engine + Compose (Linux).
 2. Start the container:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 3. Open the web UI at `http://localhost:5030`.
 4. Copy `.env.example` to `.env` and set credentials (web UI + Soulseek).
@@ -14,7 +14,7 @@
 To stop:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ## API Downloads
@@ -25,6 +25,15 @@ Use `dj_to_slskd_pipeline.py` to queue downloads from `dj_candidates.csv`.
 2. Load environment variables:
    ```bash
    set -a && source .env && set +a
+   ```
+   PowerShell:
+   ```powershell
+   Get-Content .env | ForEach-Object {
+     if ($_ -match '^[^#].+=') {
+       $name, $value = $_ -split '=', 2
+       [Environment]::SetEnvironmentVariable($name, $value, 'Process')
+     }
+   }
    ```
 3. Run the downloader:
    ```bash
@@ -44,11 +53,19 @@ After downloads complete, you can re-apply Spotify metadata:
 ```bash
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
 ```
+PowerShell:
+```powershell
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --custom-tags
+```
 
 To diagnose skipped matches:
 
 ```bash
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --report tag_report.csv
+```
+PowerShell:
+```powershell
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --report tag_report.csv
 ```
 
 ## Optional: Traktor/Rekordbox Playlists (M3U)
@@ -107,3 +124,4 @@ Notes:
 - Keep `authentication.disabled: false` and change the default web UI credentials.
 - Use `readwrite` API keys for automation; avoid exposing the UI publicly.
 - If you don’t need remote config changes, set `SLSKD_REMOTE_CONFIGURATION=false`.
+- On Windows, set `SLSKD_DOWNLOADS_DIR` in `.env` to a bind-mountable path like `C:/Users/<you>/Soulseek/downloads`.

@@ -20,17 +20,29 @@ Use the tagging script to re-apply Spotify metadata to downloaded files:
 ```bash
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
 ```
+PowerShell:
+```powershell
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --custom-tags
+```
 
 Dry-run first:
 
 ```bash
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --dry-run
 ```
+PowerShell:
+```powershell
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --dry-run
+```
 
 Generate a report (to see why files were skipped and the best match scores):
 
 ```bash
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --report tag_report.csv
+```
+PowerShell:
+```powershell
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --report tag_report.csv
 ```
 
 ## Traktor/Rekordbox Playlists (Style-Based M3U)
@@ -52,7 +64,7 @@ This generates `playlists/*.m3u`, which you can import into Traktor.
 ## Reduce Manual Work
 
 - Keep `quiet_fallback: asis` and `fromfilename` in beets so unmatched files still import.
-- Use `scripts/beets_import.sh` on a schedule for automatic cleanup.
+- Use `scripts/beets_import.sh` (macOS/Linux) or `scripts/beets_import.ps1` (Windows) on a schedule for automatic cleanup.
 
 ## Normalize Loudness (Optional)
 
@@ -60,6 +72,10 @@ After beets import, you can normalize volume levels with ffmpeg’s 2-pass `loud
 
 ```bash
 scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
+```
+PowerShell:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\normalize_loudness.ps1 -InputDir "$HOME/Music/DJ/library"
 ```
 
 Tweak targets via `TARGET_LUFS`, `TARGET_TP`, and `TARGET_LRA`.
