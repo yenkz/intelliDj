@@ -41,8 +41,20 @@ The following software needs to be installed before following the steps below:
    ```bash
    docker compose up -d
    ```
-6. Export a Spotify playlist CSV (see [Spotify export](docs/spotify-export.md)).
-7. Generate download candidates (see [Output format](docs/output-format.md)):
+
+6. Choose how to run IntelliDj:
+
+   **Option A: Streamlit UI (recommended for most users)**
+   ```bash
+   make ui
+   ```
+   Then open the local URL shown in terminal (usually `http://localhost:8501`) and run the workflow step-by-step from the UI.
+
+   **Option B: CLI (script-by-script)**
+   Continue with steps 7-12 below.
+
+7. Export a Spotify playlist CSV (see [Spotify export](docs/spotify-export.md)).
+8. Generate download candidates (see [Output format](docs/output-format.md)):
    ```bash
    poetry run python csv_to_dj_pipeline.py
    ```
@@ -51,19 +63,19 @@ The following software needs to be installed before following the steps below:
    poetry run python csv_to_dj_pipeline.py --input csv/Liked_Songs.csv
    ```
    If `--output` is not provided, output defaults to `<input_stem>_dj_candidates.csv` (for example `spotify_export_dj_candidates.csv` or `csv/Liked_Songs_dj_candidates.csv`).
-8. Download tracks via slskd (see [slskd setup](docs/slskd.md)):
+9. Download tracks via slskd (see [slskd setup](docs/slskd.md)):
    ```bash
    poetry run python dj_to_slskd_pipeline.py --csv spotify_export_dj_candidates.csv
    ```
-9. (Optional) Re-apply Spotify metadata before beets (see [Recommendations](docs/recommendations.md)):
+10. (Optional) Re-apply Spotify metadata before beets (see [Recommendations](docs/recommendations.md)):
    ```bash
    poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
    ```
-10. Import into your library with beets (create `~/.config/beets/config.yaml` first; see [Beets cleanup workflow](docs/beets.md)):
+11. Import into your library with beets (create `~/.config/beets/config.yaml` first; see [Beets cleanup workflow](docs/beets.md)):
    ```bash
    poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
    ```
-11. (Optional) Normalize loudness in-place (see [Recommendations](docs/recommendations.md)):
+12. (Optional) Normalize loudness in-place (see [Recommendations](docs/recommendations.md)):
    ```bash
    scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
    ```
