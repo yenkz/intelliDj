@@ -119,7 +119,18 @@ with col1:
 
     st.subheader("Step 2: Generate dj_candidates.csv")
     if st.button("Run csv_to_dj_pipeline.py"):
-        run_cmd_stream("csv_to_dj_pipeline", ["python", "csv_to_dj_pipeline.py"], env)
+        run_cmd_stream(
+            "csv_to_dj_pipeline",
+            [
+                "python",
+                "csv_to_dj_pipeline.py",
+                "--input",
+                str(expand_path(spotify_csv_path)),
+                "--output",
+                str(expand_path(candidates_csv_path)),
+            ],
+            env,
+        )
 
     st.subheader("Step 3: Download via slskd")
     if st.button("Run dj_to_slskd_pipeline.py"):

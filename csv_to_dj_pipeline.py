@@ -78,6 +78,17 @@ def infer_style(genres, bpm, energy):
 
 def build_candidates_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
+    columns = [
+        "artist",
+        "track",
+        "bpm",
+        "energy",
+        "danceability",
+        "style",
+        "label",
+        "genres",
+        "search_string",
+    ]
 
     for _, row in df.iterrows():
         artist_raw = row["Artist Name(s)"]
@@ -105,7 +116,7 @@ def build_candidates_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             "search_string": f"{artist} - {track}",
         })
 
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(rows, columns=columns)
 
     out.drop_duplicates(subset=["search_string"], inplace=True)
     out.sort_values(by=["style", "bpm"], inplace=True)

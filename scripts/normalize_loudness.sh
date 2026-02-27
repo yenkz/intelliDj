@@ -95,20 +95,34 @@ while IFS= read -r -d '' path; do
     continue
   fi
 
-  analysis_json="$(ffmpeg -hide_banner -nostdin -i "$path" \
+  analysis_output="$(ffmpeg -hide_banner -nostdin -i "$path" \
     -af "loudnorm=I=${TARGET_LUFS}:TP=${TARGET_TP}:LRA=${TARGET_LRA}:print_format=json" \
-    -f null - 2>/dev/null || true)"
+    -f null - 2>&1 || true)"
 
-  if [[ -z "$analysis_json" ]]; then
+  if [[ -z "$analysis_output" ]]; then
     echo "[skip] no loudnorm analysis for: $path"
     ((skipped++))
     continue
   fi
 
   read -r measured_i measured_tp measured_lra measured_thresh offset < <(
-    python3 - <<'PY' <<< "$analysis_json"
-import json, sys
-data = json.load(sys.stdin)
+    printf '%s' "$analysis_output" | python3 -c '
+import json
+import sys
+
+text = sys.stdin.read()
+start = text.rfind("{")
+end = text.rfind("}")
+if start < 0 or end < 0 or end <= start:
+    print("", "", "", "", "")
+    raise SystemExit(0)
+
+try:
+    data = json.loads(text[start:end + 1])
+except Exception:
+    print("", "", "", "", "")
+    raise SystemExit(0)
+
 print(
     data.get("input_i", ""),
     data.get("input_tp", ""),
@@ -116,7 +130,7 @@ print(
     data.get("input_thresh", ""),
     data.get("target_offset", ""),
 )
-PY
+'
   )
 
   if [[ -z "$measured_i" || -z "$offset" ]]; then

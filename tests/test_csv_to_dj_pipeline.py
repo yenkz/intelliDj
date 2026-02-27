@@ -54,3 +54,30 @@ def test_build_candidates_dataframe():
     assert row["track"] == "Track"
     assert row["style"] == "Tech House"
     assert row["search_string"] == "Artist A - Track"
+
+
+def test_build_candidates_dataframe_empty():
+    df = pd.DataFrame(
+        columns=[
+            "Artist Name(s)",
+            "Track Name",
+            "Tempo",
+            "Energy",
+            "Danceability",
+            "Genres",
+            "Record Label",
+        ]
+    )
+    out = mod.build_candidates_dataframe(df)
+    assert out.empty
+    assert list(out.columns) == [
+        "artist",
+        "track",
+        "bpm",
+        "energy",
+        "danceability",
+        "style",
+        "label",
+        "genres",
+        "search_string",
+    ]
