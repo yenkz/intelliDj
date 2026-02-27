@@ -37,7 +37,6 @@ def _setup_logging() -> None:
 
 
 DEFAULT_INPUT_FILE = "spotify_export.csv"
-DEFAULT_OUTPUT_FILE = "dj_candidates.csv"
 
 # ---------------- HELPERS ----------------
 
@@ -122,6 +121,12 @@ def build_candidates_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     out.sort_values(by=["style", "bpm"], inplace=True)
     return out
 
+
+def default_output_for_input(input_file: str) -> str:
+    input_path = Path(input_file)
+    return str(input_path.with_name(f"{input_path.stem}_dj_candidates.csv"))
+
+
 def main(input_file: str, output_file: str) -> None:
     df = pd.read_csv(input_file)
 
@@ -170,6 +175,11 @@ if __name__ == "__main__":
     _setup_logging()
     parser = argparse.ArgumentParser(description="Generate dj_candidates.csv from a Spotify export")
     parser.add_argument("--input", default=DEFAULT_INPUT_FILE, help="Path to spotify_export.csv")
-    parser.add_argument("--output", default=DEFAULT_OUTPUT_FILE, help="Path to dj_candidates.csv")
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Path to output CSV (default: <input_stem>_dj_candidates.csv)",
+    )
     args = parser.parse_args()
-    main(args.input, args.output)
+    output_file = args.output or default_output_for_input(args.input)
+    main(args.input, output_file)

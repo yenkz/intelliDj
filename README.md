@@ -41,14 +41,19 @@ The following software needs to be installed before following the steps below:
    ```bash
    docker compose up -d
    ```
-6. Export a Spotify playlist CSV as `spotify_export.csv` (see [Spotify export](docs/spotify-export.md)).
+6. Export a Spotify playlist CSV (see [Spotify export](docs/spotify-export.md)).
 7. Generate download candidates (see [Output format](docs/output-format.md)):
    ```bash
    poetry run python csv_to_dj_pipeline.py
    ```
+   Or pass a custom input CSV:
+   ```bash
+   poetry run python csv_to_dj_pipeline.py --input csv/Liked_Songs.csv
+   ```
+   If `--output` is not provided, output defaults to `<input_stem>_dj_candidates.csv` (for example `spotify_export_dj_candidates.csv` or `csv/Liked_Songs_dj_candidates.csv`).
 8. Download tracks via slskd (see [slskd setup](docs/slskd.md)):
    ```bash
-   poetry run python dj_to_slskd_pipeline.py --csv dj_candidates.csv
+   poetry run python dj_to_slskd_pipeline.py --csv spotify_export_dj_candidates.csv
    ```
 9. (Optional) Re-apply Spotify metadata before beets (see [Recommendations](docs/recommendations.md)):
    ```bash

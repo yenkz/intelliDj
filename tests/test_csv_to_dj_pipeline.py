@@ -81,3 +81,8 @@ def test_build_candidates_dataframe_empty():
         "genres",
         "search_string",
     ]
+
+
+def test_default_output_for_input():
+    assert mod.default_output_for_input("spotify_export.csv") == "spotify_export_dj_candidates.csv"
+    assert mod.default_output_for_input("csv/Liked_Songs.csv") == "csv/Liked_Songs_dj_candidates.csv"
