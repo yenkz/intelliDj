@@ -65,7 +65,17 @@ docker compose up -d
 
 Open [http://localhost:5030](http://localhost:5030).
 
-## 6) Run the main workflow
+## 6) Choose how to run IntelliDj
+
+### Option A: UI (recommended)
+
+```powershell
+poetry run streamlit run ui/streamlit_app.py
+```
+
+Then open the local URL shown in terminal (usually `http://localhost:8501`) and run the workflow from the UI.
+
+### Option B: CLI (script-by-script)
 
 Generate candidate tracks:
 
@@ -73,10 +83,12 @@ Generate candidate tracks:
 poetry run python csv_to_dj_pipeline.py
 ```
 
+By default this writes `spotify_export_dj_candidates.csv` (or `<input_stem>_dj_candidates.csv` if you pass `--input`).
+
 Queue downloads in slskd:
 
 ```powershell
-poetry run python dj_to_slskd_pipeline.py --csv dj_candidates.csv
+poetry run python dj_to_slskd_pipeline.py --csv spotify_export_dj_candidates.csv
 ```
 
 Optional metadata enrichment:

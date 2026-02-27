@@ -8,4 +8,8 @@ Steps:
 2. Export your playlist(s) as CSV
 3. Save the export as `spotify_export.csv` in the project root
 
-If you want a different name or location, update `INPUT_FILE` in `csv_to_dj_pipeline.py`.
+If you want a different name or location, pass it with:
+
+```bash
+poetry run python csv_to_dj_pipeline.py --input path/to/your_export.csv
+```

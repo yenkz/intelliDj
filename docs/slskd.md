@@ -19,7 +19,7 @@ docker compose down
 
 ## API Downloads
 
-Use `dj_to_slskd_pipeline.py` to queue downloads from `dj_candidates.csv`.
+Use `dj_to_slskd_pipeline.py` to queue downloads from your generated candidates CSV.
 
 1. Ensure dependencies are installed (`make install-python` or `poetry install`).
 2. Load environment variables:
@@ -37,7 +37,7 @@ Use `dj_to_slskd_pipeline.py` to queue downloads from `dj_candidates.csv`.
    ```
 3. Run the downloader:
    ```bash
-   poetry run python dj_to_slskd_pipeline.py --csv dj_candidates.csv
+   poetry run python dj_to_slskd_pipeline.py --csv spotify_export_dj_candidates.csv
    ```
 
 Notes:
