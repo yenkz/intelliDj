@@ -105,7 +105,9 @@ Examples:
 - `make install-python-pip` — install Python deps using pip.
 - `make slskd-download CSV=Happy_Funky_House_aka_HFH.csv` — run the download step with a specific CSV.
 - `make playlists CSV=dj_candidates.csv` — generate playlists for a specific CSV.
+- `make duplicates DUP_SOURCE=~/Music/DJ/library` — detect duplicates in a library (report-only by default).
 - `make ui` — launch the Streamlit UI.
+- `make duplicates-ui` — launch the duplicate finder UI.
 
 If `make` isn’t installed:
 

@@ -80,6 +80,30 @@ The following software needs to be installed before following the steps below:
    scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
    ```
 
+## Optional Tools
+
+### Duplicate Track Finder
+
+Find duplicates within one folder or across two folders, then:
+
+- report only
+- move duplicates to a review folder
+- delete duplicates (with safety checks)
+
+Launch UI:
+
+```bash
+make duplicates-ui
+```
+
+Or run CLI:
+
+```bash
+poetry run python scripts/find_duplicate_tracks.py --source-dir ~/Music/DJ/library
+```
+
+Full guide: [Duplicate track detection](docs/duplicates.md)
+
 ## Quickstart (Windows 11 + PowerShell, end-to-end)
 
 Use the dedicated guide: [Windows 11 PowerShell quickstart](docs/windows.md).
@@ -90,6 +114,7 @@ Use the dedicated guide: [Windows 11 PowerShell quickstart](docs/windows.md).
 - [Windows 11 PowerShell quickstart](docs/windows.md)
 - [Spotify export](docs/spotify-export.md)
 - [slskd (Docker + API downloads)](docs/slskd.md)
+- [Duplicate track detection](docs/duplicates.md)
 - [Beets cleanup workflow](docs/beets.md)
 - [Output format](docs/output-format.md)
 - [Workflow diagram](diagram.md)

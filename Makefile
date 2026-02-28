@@ -2,6 +2,15 @@ OS_NAME := $(shell uname -s 2>/dev/null || echo unknown)
 CSV ?= dj_candidates.csv
 LIBRARY_DIR ?= ~/Music/DJ/library
 PLAYLIST_OUT ?= playlists
+DUP_SOURCE ?= ~/Music/DJ/library
+DUP_COMPARE ?=
+DUP_ACTION ?= report
+DUP_KEEP ?= best
+DUP_MATCH ?= hybrid
+DUP_REVIEW ?= duplicate_review
+DUP_DRY_RUN ?= 1
+DUP_PREFER_ORIGIN ?=
+DUP_CLEANUP_EMPTY ?= 0
 
 ifeq ($(OS),Windows_NT)
   DETECTED_OS := windows
@@ -11,7 +20,7 @@ else
   DETECTED_OS := linux
 endif
 
-.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists slskd-download ui test test-cov
+.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists slskd-download duplicates ui duplicates-ui test test-cov
 
 prereqs:
 	@echo "Detected OS: $(DETECTED_OS)"
@@ -89,8 +98,22 @@ playlists:
 slskd-download:
 	@poetry run python dj_to_slskd_pipeline.py --csv $(CSV)
 
+duplicates:
+	@CMD='poetry run python scripts/find_duplicate_tracks.py --source-dir "$(DUP_SOURCE)" --match-mode "$(DUP_MATCH)" --action "$(DUP_ACTION)" --keep-strategy "$(DUP_KEEP)"'; \
+	if [ -n "$(DUP_COMPARE)" ]; then CMD="$$CMD --compare-dir \"$(DUP_COMPARE)\""; fi; \
+	if [ -n "$(DUP_PREFER_ORIGIN)" ]; then CMD="$$CMD --prefer-origin \"$(DUP_PREFER_ORIGIN)\""; fi; \
+	if [ "$(DUP_ACTION)" = "move" ]; then CMD="$$CMD --review-dir \"$(DUP_REVIEW)\""; fi; \
+	if [ "$(DUP_ACTION)" = "delete" ] && [ "$(DUP_CLEANUP_EMPTY)" = "1" ]; then CMD="$$CMD --cleanup-empty-dirs"; fi; \
+	if [ "$(DUP_DRY_RUN)" = "1" ]; then CMD="$$CMD --dry-run"; fi; \
+	if [ "$(DUP_ACTION)" != "report" ] && [ "$(DUP_DRY_RUN)" != "1" ]; then CMD="$$CMD --yes"; fi; \
+	echo "$$CMD"; \
+	eval "$$CMD"
+
 ui:
 	@poetry run streamlit run ui/streamlit_app.py
+
+duplicates-ui:
+	@poetry run streamlit run ui/streamlit_duplicates_app.py
 
 test:
 	@poetry run pytest
