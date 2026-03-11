@@ -8,6 +8,21 @@ def test_clean_track_name():
     assert mod.clean_track_name("Song - original mix") == "Song"
 
 
+def test_simplify_for_search():
+    # Strips remix attributions
+    assert mod.simplify_for_search("Halfway to Nowhere - Ross from Friends Remix") == "Halfway to Nowhere"
+    # Strips feat
+    assert mod.simplify_for_search("Classic (feat. POWERS) - The Knocks Sunrise Edit") == "Classic"
+    # Strips version suffixes
+    assert mod.simplify_for_search("Your Dreams - Lucid Version") == "Your Dreams"
+    # Preserves simple names
+    assert mod.simplify_for_search("Whenever") == "Whenever"
+    # Also applies base clean_track_name rules
+    assert mod.simplify_for_search("Song (Extended Mix)") == "Song"
+    # Strips parenthetical remixes
+    assert mod.simplify_for_search("Is This How You Feel? (Classixx Remix)") == "Is This How You Feel?"
+
+
 def test_normalize_artist():
     assert mod.normalize_artist("A; B") == "A"
     assert mod.normalize_artist("Solo") == "Solo"

@@ -55,6 +55,42 @@ def clean_track_name(name):
         cleaned = re.sub(j, "", cleaned, flags=re.IGNORECASE)
     return cleaned.strip()
 
+
+def simplify_for_search(name):
+    """Aggressively strip remix/version/edit/feat info for Soulseek search.
+
+    This produces a minimal query that maximises the chance of finding results.
+    The full track name is still used for relevance scoring after results arrive.
+    """
+    extra_junk = [
+        r"\(feat\.?\s+[^)]*\)",       # (feat. POWERS)
+        r"\(ft\.?\s+[^)]*\)",         # (ft. Someone)
+        r"feat\.?\s+.+",              # feat. Someone (no parens)
+        r"ft\.?\s+.+",                # ft. Someone (no parens)
+        r"-\s+.+\s+remix\b.*",        # - Ross from Friends Remix
+        r"-\s+.+\s+edit\b.*",         # - The Knocks Sunrise Edit
+        r"-\s+.+\s+mix\b.*",          # - C.L.A.W.S Day Mix
+        r"-\s+.+\s+version\b.*",      # - Lucid Version
+        r"-\s+.+\s+dub\b.*",          # - Dub Mix
+        r"-\s+.+\s+rework\b.*",       # - Rework
+        r"-\s+.+\s+bootleg\b.*",      # - Bootleg
+        r"-\s+\w+\s+remix\b.*",       # - Someone Remix (single word)
+        r"-\s+\w+\s+version\b.*",     # - Lucid Version (single word)
+        r"\(.*remix.*\)",             # (Someone Remix)
+        r"\(.*edit.*\)",              # (Someone Edit)
+        r"\(.*version.*\)",           # (Lucid Version)
+        r"\(.*mix\)",                 # (Day Mix)
+        r"\(.*dub\)",                 # (Dub)
+        r"\(.*rework.*\)",            # (Rework)
+        r"\(.*bootleg.*\)",           # (Bootleg)
+    ]
+    cleaned = clean_track_name(name)
+    for j in extra_junk:
+        cleaned = re.sub(j, "", cleaned, flags=re.IGNORECASE)
+    # collapse whitespace and trailing punctuation
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -–—")
+    return cleaned
+
 def normalize_artist(artist):
     # Soulseek suele fallar con múltiples artistas
     return artist.split(";")[0].strip()

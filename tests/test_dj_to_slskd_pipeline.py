@@ -38,12 +38,43 @@ def test_iter_files_other_keys():
 
 
 def test_score_file():
-    score, size = mod.score_file({"filename": "Track.flac", "extension": "", "size": 123})
-    assert score == 120
+    rel, fmt, size = mod.score_file({"filename": "Track.flac", "extension": "", "size": 123})
+    assert fmt == 120
     assert size == 123
 
-    score, _ = mod.score_file({"filename": "Track 320.mp3", "extension": "mp3"})
-    assert score == 15
+    rel, fmt, _ = mod.score_file({"filename": "Track 320.mp3", "extension": "mp3", "size": 100})
+    assert fmt == 15
+
+
+def test_score_file_with_query():
+    rel, fmt, _ = mod.score_file(
+        {"filename": "Artist - Song.flac", "extension": "flac", "size": 100},
+        query="Artist - Song",
+    )
+    assert rel == 100  # all query words match
+    assert fmt == 120
+
+    rel, _, _ = mod.score_file(
+        {"filename": "Unrelated File.flac", "extension": "flac", "size": 100},
+        query="Artist - Song",
+    )
+    assert rel == 0  # no query words match
+
+
+def test_score_file_filters_non_audio():
+    rel, fmt, size = mod.score_file({"filename": "readme.txt", "extension": "txt", "size": 100})
+    assert (rel, fmt, size) == (0, 0, 0)
+
+    rel, fmt, size = mod.score_file({"filename": "cover.jpg", "extension": "jpg", "size": 100})
+    assert (rel, fmt, size) == (0, 0, 0)
+
+
+def test_relevance_score():
+    assert mod.relevance_score("Artist - Song.flac", "Artist - Song") == 100
+    assert mod.relevance_score("Other - File.flac", "Artist - Song") == 0
+    # Partial match (artist present, track missing)
+    score = mod.relevance_score("Artist - Different.flac", "Artist - Song")
+    assert 0 < score < 100
 
 
 def test_pick_best_file():
@@ -56,6 +87,16 @@ def test_pick_best_file():
     assert file_info["filename"].endswith(".flac")
 
 
+def test_pick_best_file_with_query_filters_irrelevant():
+    responses = [
+        {"username": "u1", "files": [{"filename": "Wrong Artist - Wrong Song.flac", "extension": "flac", "size": 1000}]},
+        {"username": "u2", "files": [{"filename": "Correct Artist - Correct Song.mp3", "extension": "mp3", "size": 50}]},
+    ]
+    user, file_info = mod.pick_best_file(responses, query="Correct Artist - Correct Song")
+    assert user == "u2"
+    assert "Correct" in file_info["filename"]
+
+
 def test_pick_best_file_tie_breaks_on_size():
     responses = [
         {"username": "u1", "files": [{"filename": "a.flac", "extension": "flac", "size": 10}]},
@@ -64,6 +105,19 @@ def test_pick_best_file_tie_breaks_on_size():
     user, file_info = mod.pick_best_file(responses)
     assert user == "u2"
     assert file_info["filename"] == "b.flac"
+
+
+def test_build_search_queries():
+    # Simple query produces variants
+    queries = mod.build_search_queries("Stimming - Your Dreams - Lucid Version")
+    assert queries[0] == "Stimming - Your Dreams - Lucid Version"
+    assert len(queries) >= 2
+    # Simplified version should not contain "Version"
+    assert "version" not in queries[1].lower()
+
+    # Simple query with no remix stays as-is
+    queries = mod.build_search_queries("Hotlane - Whenever")
+    assert queries[0] == "Hotlane - Whenever"
 
 
 def test_load_search_strings(tmp_path):
