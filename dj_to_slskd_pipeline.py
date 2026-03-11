@@ -25,6 +25,8 @@ if not hasattr(typing, "NotRequired"):
 
 import slskd_api
 
+from csv_to_dj_pipeline import simplify_for_search
+
 DEFAULT_HOST = "http://localhost:5030"
 DEFAULT_URL_BASE = "/api/v0"
 DEFAULT_RETRIES = int(os.getenv("SLSKD_RETRY_ATTEMPTS", "3"))
@@ -153,22 +155,69 @@ def load_search_strings(csv_path: str, limit: int | None) -> List[str]:
     return rows
 
 
-def score_file(file_info: Dict) -> Tuple[int, int]:
+def _normalize_for_match(text: str) -> str:
+    """Lowercase, strip punctuation, collapse whitespace for fuzzy comparison."""
+    import re as _re
+    text = text.lower()
+    text = _re.sub(r"[^\w\s]", " ", text)
+    return " ".join(text.split())
+
+
+def relevance_score(filename: str, query: str) -> int:
+    """Score how well a filename matches the search query (0-100).
+
+    Returns 0 if the file is clearly irrelevant (missing artist or track words).
+    """
+    fn = _normalize_for_match(filename)
+    q = _normalize_for_match(query)
+
+    query_words = q.split()
+    if not query_words:
+        return 0
+
+    matched = sum(1 for w in query_words if w in fn)
+    ratio = matched / len(query_words)
+
+    # Require at least half the query words to be present
+    if ratio < 0.5:
+        return 0
+
+    return int(ratio * 100)
+
+
+AUDIO_EXTENSIONS = frozenset({"flac", "mp3", "wav", "aac", "ogg", "m4a", "wma", "aiff", "alac", "opus"})
+
+
+def score_file(file_info: Dict, query: str = "") -> Tuple[int, int, int]:
+    """Score a file by (relevance, format_quality, size).
+
+    When query is provided, files that don't match get relevance=0 and are
+    effectively filtered out by pick_best_file.
+    """
     name = str(file_info.get("filename", "")).lower()
     ext = str(file_info.get("extension", "")).lower()
     size = int(file_info.get("size") or 0)
 
-    score = 0
-    if name.endswith(".flac") or ext == "flac":
-        score += 100
-    if "flac" in name:
-        score += 20
-    if name.endswith(".mp3") or ext == "mp3":
-        score += 5
-    if "320" in name:
-        score += 10
+    # Filter out non-audio files
+    file_ext = ext or name.rsplit(".", 1)[-1] if "." in name else ""
+    if file_ext not in AUDIO_EXTENSIONS:
+        return 0, 0, 0
 
-    return score, size
+    # Relevance score (0-100)
+    rel = relevance_score(name, query) if query else 50
+
+    # Format quality score
+    fmt = 0
+    if name.endswith(".flac") or ext == "flac":
+        fmt += 100
+    if "flac" in name:
+        fmt += 20
+    if name.endswith(".mp3") or ext == "mp3":
+        fmt += 5
+    if "320" in name:
+        fmt += 10
+
+    return rel, fmt, size
 
 
 def normalize_responses(raw) -> List[Dict]:
@@ -194,16 +243,19 @@ def iter_files(response: Dict) -> List[Dict]:
     return []
 
 
-def pick_best_file(responses: List[Dict]) -> Tuple[str, Dict] | Tuple[None, None]:
+def pick_best_file(responses: List[Dict], query: str = "") -> Tuple[str, Dict] | Tuple[None, None]:
     best_user = None
     best_file = None
-    best_score = (-1, -1)
+    best_score = (-1, -1, -1)
 
     for response in responses:
         username = response.get("username")
         files = iter_files(response)
         for f in files:
-            score = score_file(f)
+            score = score_file(f, query)
+            # Skip files with zero relevance (irrelevant to the query)
+            if query and score[0] == 0:
+                continue
             if score > best_score:
                 best_score = score
                 best_user = username
@@ -213,6 +265,178 @@ def pick_best_file(responses: List[Dict]) -> Tuple[str, Dict] | Tuple[None, None
         return None, None
 
     return best_user, best_file
+
+
+def build_search_queries(query: str) -> List[str]:
+    """Build a list of search queries from most specific to most general.
+
+    Returns up to 3 variants:
+    1. The original query as-is
+    2. Simplified query (remix/version/feat stripped) if different from original
+    3. Artist-only query as last resort
+    """
+    queries = [query]
+
+    # Extract artist and track parts
+    parts = query.split(" - ", 1)
+    artist = parts[0].strip()
+    track = parts[1].strip() if len(parts) > 1 else ""
+
+    if track:
+        simplified_track = simplify_for_search(track)
+        simplified = f"{artist} {simplified_track}"
+        if simplified.lower() != query.lower():
+            queries.append(simplified)
+
+        # Artist-only fallback (only if there's a track to drop)
+        if len(artist.split()) >= 2:
+            queries.append(artist)
+
+    return queries
+
+
+def execute_search(slskd_client, api_base: str, api_key: str, search_text: str,
+                   args, debug: bool = False) -> List[Dict]:
+    """Execute a single search and poll for responses. Returns the response list."""
+    search_id = str(uuid.uuid4())
+    search_resp = retry_with_backoff(
+        lambda: slskd_client.searches.search_text(
+            searchText=search_text,
+            id=search_id,
+            fileLimit=args.file_limit,
+            responseLimit=args.response_limit,
+            searchTimeout=args.search_timeout_ms,
+        ),
+        label="slskd.searches.search_text",
+    )
+    search_token = None
+    search_id_actual = search_id
+    if isinstance(search_resp, dict):
+        search_id_actual = search_resp.get("id") or search_id_actual
+        search_token = search_resp.get("token") or search_resp.get("id")
+    if not search_token:
+        search_token = search_id_actual
+    state_id = search_token
+    if isinstance(search_token, int):
+        state_id = search_id_actual
+
+    time.sleep(3)
+
+    responses = []
+    raw_responses = None
+    state_obj = None
+    stop_issued = False
+    deadline = time.time() + max(args.search_timeout_ms / 1000.0, 1.0)
+    while time.time() < deadline:
+        try:
+            responses = fetch_search_responses(api_base, api_key, search_id_actual)
+        except Exception:
+            responses = []
+        if responses:
+            break
+
+        state_obj = retry_with_backoff(
+            lambda: slskd_client.searches.state(state_id, includeResponses=True),
+            label="slskd.searches.state",
+        )
+        if isinstance(state_obj, dict):
+            if (not args.no_stop) and (not stop_issued) and state_obj.get("responseCount", 0) and not state_obj.get("isComplete", False):
+                try:
+                    retry_with_backoff(
+                        lambda: slskd_client.searches.stop(state_id),
+                        label="slskd.searches.stop",
+                    )
+                    stop_issued = True
+                except Exception:
+                    pass
+
+            responses = normalize_responses(state_obj.get("responses"))
+            if responses:
+                break
+            if state_obj.get("responseCount", 0):
+                try:
+                    raw_responses = retry_with_backoff(
+                        lambda: slskd_client.searches.search_responses(state_id),
+                        label="slskd.searches.search_responses",
+                    )
+                    responses = normalize_responses(raw_responses)
+                except Exception:
+                    raw_responses = None
+                    responses = []
+                if responses:
+                    break
+
+                if search_token != state_id:
+                    try:
+                        alt_state = retry_with_backoff(
+                            lambda: slskd_client.searches.state(search_token, includeResponses=True),
+                            label="slskd.searches.state (alt)",
+                        )
+                        if isinstance(alt_state, dict):
+                            responses = normalize_responses(alt_state.get("responses"))
+                            state_obj = alt_state
+                    except Exception:
+                        pass
+                    if not responses:
+                        try:
+                            alt_responses = retry_with_backoff(
+                                lambda: slskd_client.searches.search_responses(search_token),
+                                label="slskd.searches.search_responses (alt)",
+                            )
+                            responses = normalize_responses(alt_responses)
+                        except Exception:
+                            pass
+                    if responses:
+                        break
+        time.sleep(2)
+
+    if not responses:
+        try:
+            raw_responses = retry_with_backoff(
+                lambda: slskd_client.searches.search_responses(state_id),
+                label="slskd.searches.search_responses (final)",
+            )
+            responses = normalize_responses(raw_responses)
+        except Exception:
+            raw_responses = None
+
+    if debug:
+        if isinstance(search_resp, dict):
+            print(f"[debug] search_resp keys: {sorted(search_resp.keys())}")
+        print(f"[debug] search_id: {search_id_actual}")
+        print(f"[debug] search_token: {search_token}")
+        print(f"[debug] state_id: {state_id}")
+        print(f"[debug] raw response type: {type(raw_responses)}")
+        if isinstance(raw_responses, list):
+            print(f"[debug] raw response length: {len(raw_responses)}")
+        if isinstance(state_obj, dict):
+            print(f"[debug] state keys: {sorted(state_obj.keys())}")
+            print(f"[debug] state counts: responses={state_obj.get('responseCount')} files={state_obj.get('fileCount')}")
+            print(f"[debug] state complete: {state_obj.get('isComplete')}")
+            resp_val = state_obj.get("responses")
+            if isinstance(resp_val, list):
+                print(f"[debug] state responses len: {len(resp_val)}")
+            else:
+                print(f"[debug] state responses type: {type(resp_val)}")
+        if responses:
+            sample = responses[0]
+            print(f"[debug] response keys: {sorted(sample.keys())}")
+            files = iter_files(sample)
+            print(f"[debug] first response files: {len(files)}")
+        elif isinstance(raw_responses, dict):
+            print(f"[debug] raw response keys: {sorted(raw_responses.keys())}")
+
+    # Stop the search to clear UI
+    if not args.no_stop:
+        try:
+            retry_with_backoff(
+                lambda: slskd_client.searches.stop(state_id),
+                label="slskd.searches.stop (cleanup)",
+            )
+        except Exception:
+            pass
+
+    return responses
 
 
 def main() -> None:
@@ -248,147 +472,22 @@ def main() -> None:
     skipped = 0
 
     for query in searches:
-        search_id = str(uuid.uuid4())
-        search_resp = retry_with_backoff(
-            lambda: slskd.searches.search_text(
-                searchText=query,
-                id=search_id,
-                fileLimit=args.file_limit,
-                responseLimit=args.response_limit,
-                searchTimeout=args.search_timeout_ms,
-            ),
-            label="slskd.searches.search_text",
-        )
-        # slskd may return its own token/id; prefer them if present
-        search_token = None
-        search_id_actual = search_id
-        if isinstance(search_resp, dict):
-            search_id_actual = search_resp.get("id") or search_id_actual
-            search_token = search_resp.get("token") or search_resp.get("id")
-        if not search_token:
-            search_token = search_id_actual
-        # Prefer UUID token for state/response calls when available
-        state_id = search_token
-        if isinstance(search_token, int):
-            state_id = search_id_actual
+        # Build progressively simpler search queries
+        search_variants = build_search_queries(query)
 
-        # Give the server a moment to populate results
-        time.sleep(3)
+        user = None
+        file_info = None
 
-        # Poll for responses as soon as they appear (no need to wait for completion)
-        responses = []
-        raw_responses = None
-        state_obj = None
-        stop_issued = False
-        deadline = time.time() + max(args.search_timeout_ms / 1000.0, 1.0)
-        while time.time() < deadline:
-            # Try direct REST endpoint for responses (more reliable than wrapper)
-            try:
-                responses = fetch_search_responses(api_base, api_key, search_id_actual)
-            except Exception:
-                responses = []
-            if responses:
+        for i, search_text in enumerate(search_variants):
+            if i > 0:
+                print(f"[retry] trying simplified query: {search_text}")
+
+            responses = execute_search(slskd, api_base, api_key, search_text, args, debug=args.debug)
+            user, file_info = pick_best_file(responses, query)
+
+            if user and file_info:
                 break
 
-            state_obj = retry_with_backoff(
-                lambda: slskd.searches.state(state_id, includeResponses=True),
-                label="slskd.searches.state",
-            )
-            if isinstance(state_obj, dict):
-                # If we have counts but no inline responses yet, stop the search to finalize results.
-                if (not args.no_stop) and (not stop_issued) and state_obj.get("responseCount", 0) and not state_obj.get("isComplete", False):
-                    try:
-                        retry_with_backoff(
-                            lambda: slskd.searches.stop(state_id),
-                            label="slskd.searches.stop",
-                        )
-                        stop_issued = True
-                    except Exception:
-                        pass
-
-                responses = normalize_responses(state_obj.get("responses"))
-                if responses:
-                    break
-                # If counts exist but no inline responses, try responses endpoint with id/token
-                if state_obj.get("responseCount", 0):
-                    try:
-                        raw_responses = retry_with_backoff(
-                            lambda: slskd.searches.search_responses(state_id),
-                            label="slskd.searches.search_responses",
-                        )
-                        responses = normalize_responses(raw_responses)
-                    except Exception:
-                        raw_responses = None
-                        responses = []
-                    if responses:
-                        break
-
-                    # As a fallback, try state/responses using the alternate identifier
-                    if search_token != state_id:
-                        try:
-                            alt_state = retry_with_backoff(
-                                lambda: slskd.searches.state(search_token, includeResponses=True),
-                                label="slskd.searches.state (alt)",
-                            )
-                            if isinstance(alt_state, dict):
-                                responses = normalize_responses(alt_state.get("responses"))
-                                state_obj = alt_state
-                        except Exception:
-                            pass
-                        if not responses:
-                            try:
-                                alt_responses = retry_with_backoff(
-                                    lambda: slskd.searches.search_responses(search_token),
-                                    label="slskd.searches.search_responses (alt)",
-                                )
-                                responses = normalize_responses(alt_responses)
-                            except Exception:
-                                pass
-                        if responses:
-                            break
-            time.sleep(2)
-        if args.debug and (not responses):
-            print(f"[debug] timed out waiting for responses after {args.search_timeout_ms}ms")
-
-        # If completed but responses still empty, try fallback endpoints once.
-        if not responses:
-            try:
-                raw_responses = retry_with_backoff(
-                    lambda: slskd.searches.search_responses(state_id),
-                    label="slskd.searches.search_responses (final)",
-                )
-                responses = normalize_responses(raw_responses)
-            except Exception:
-                raw_responses = None
-
-        if args.debug:
-            if isinstance(search_resp, dict):
-                print(f"[debug] search_resp keys: {sorted(search_resp.keys())}")
-            print(f"[debug] search_id: {search_id_actual}")
-            print(f"[debug] search_token: {search_token}")
-            print(f"[debug] state_id: {state_id}")
-            print(f"[debug] raw response type: {type(raw_responses)}")
-            if isinstance(raw_responses, list):
-                print(f"[debug] raw response length: {len(raw_responses)}")
-            if isinstance(state_obj, dict):
-                print(f"[debug] state keys: {sorted(state_obj.keys())}")
-                print(f"[debug] state counts: responses={state_obj.get('responseCount')} files={state_obj.get('fileCount')}")
-                print(f"[debug] state complete: {state_obj.get('isComplete')}")
-                resp_val = state_obj.get("responses")
-                if isinstance(resp_val, list):
-                    print(f"[debug] state responses len: {len(resp_val)}")
-                else:
-                    print(f"[debug] state responses type: {type(resp_val)}")
-            if responses:
-                sample = responses[0]
-                print(f"[debug] response keys: {sorted(sample.keys())}")
-                files = iter_files(sample)
-                print(f"[debug] first response files: {len(files)}")
-            else:
-                if isinstance(raw_responses, dict):
-                    print(f"[debug] raw response keys: {sorted(raw_responses.keys())}")
-
-        user, file_info = pick_best_file(responses)
         if not user or not file_info:
             print(f"[skip] no results for: {query}")
             skipped += 1
@@ -408,15 +507,6 @@ def main() -> None:
         if ok:
             print(f"[queued] {user}: {payload[0]['filename']}")
             queued += 1
-            # Stop the search to clear "in progress" status in UI
-            if not args.no_stop:
-                try:
-                    retry_with_backoff(
-                        lambda: slskd.searches.stop(state_id),
-                        label="slskd.searches.stop (post enqueue)",
-                    )
-                except Exception:
-                    pass
         else:
             print(f"[skip] enqueue failed for: {query}")
             skipped += 1
