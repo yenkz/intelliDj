@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "DJing tools to select, download, organize and enrich music"
 authors = ["yenkz <cpecile@gmail.com>"]
 readme = "README.md"
-package-mode = false
+packages = [{ include = "intellidj" }]
+
+[tool.poetry.scripts]
+intellidj = "intellidj.cli:app"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -14,7 +17,7 @@ slskd-api = "*"
 typing_extensions = "*"
 requests = "*"
 mutagen = "*"
-streamlit = "*"
+typer = { version = "*", extras = ["all"] }
 python-dotenv = "*"
 
 [tool.poetry.group.dev.dependencies]
@@ -22,7 +25,7 @@ pytest = "*"
 pytest-cov = "*"
 
 [tool.coverage.run]
-source = ["."]
+source = ["intellidj"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]

@@ -1,4 +1,4 @@
-import scripts.export_m3u_by_style as mod
+import intellidj.library.playlist as mod
 
 
 def test_normalize():
