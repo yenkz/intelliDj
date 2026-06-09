@@ -1,6 +1,6 @@
 import pandas as pd
 
-import csv_to_dj_pipeline as mod
+import intellidj.pipeline.candidates as mod
 
 
 def test_clean_track_name():

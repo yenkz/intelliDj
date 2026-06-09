@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import scripts.find_duplicate_tracks as mod
+import intellidj.library.dedupe as mod
 
 
 def make_track(

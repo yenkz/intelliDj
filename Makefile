@@ -1,7 +1,9 @@
 OS_NAME := $(shell uname -s 2>/dev/null || echo unknown)
-CSV ?= dj_candidates.csv
+CSV ?= spotify_export.csv
+CANDIDATES_CSV ?= dj_candidates.csv
 LIBRARY_DIR ?= ~/Music/DJ/library
 PLAYLIST_OUT ?= playlists
+DOWNLOADS_DIR ?= ~/Soulseek/downloads/complete
 DUP_SOURCE ?= ~/Music/DJ/library
 DUP_COMPARE ?=
 DUP_ACTION ?= report
@@ -11,6 +13,7 @@ DUP_REVIEW ?= duplicate_review
 DUP_DRY_RUN ?= 1
 DUP_PREFER_ORIGIN ?=
 DUP_CLEANUP_EMPTY ?= 0
+LIMIT ?=
 
 ifeq ($(OS),Windows_NT)
   DETECTED_OS := windows
@@ -20,7 +23,10 @@ else
   DETECTED_OS := linux
 endif
 
-.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists slskd-download duplicates ui duplicates-ui test test-cov
+.PHONY: prereqs install-docker install-poetry install-python install-python-pip \
+        install-beets-deps install-keyfinder-cli beets-import \
+        candidates download enrich playlist dedupe run \
+        test test-cov
 
 prereqs:
 	@echo "Detected OS: $(DETECTED_OS)"
@@ -73,9 +79,6 @@ install-python-pip:
 install-beets-deps:
 	@if [ "$(DETECTED_OS)" = "macos" ]; then \
 		brew install ffmpeg; \
-		if ! command -v keyfinder-cli >/dev/null 2>&1 && [ ! -x "/Applications/KeyFinder.app/Contents/MacOS/KeyFinder" ]; then \
-			echo "KeyFinder not found. Install the KeyFinder app or keyfinder-cli, then set keyfinder.bin in your beets config."; \
-		fi; \
 	elif [ "$(DETECTED_OS)" = "windows" ]; then \
 		echo "Please install ffmpeg and keyfinder manually, then ensure they are on PATH."; \
 	else \
@@ -92,31 +95,38 @@ beets-import:
 		scripts/beets_import.sh; \
 	fi
 
-playlists:
-	@poetry run python scripts/export_m3u_by_style.py --csv $(CSV) --library-dir $(LIBRARY_DIR) --out-dir $(PLAYLIST_OUT)
+# ── Pipeline commands ──────────────────────────────────────────────────────────
 
-slskd-download:
-	@poetry run python dj_to_slskd_pipeline.py --csv $(CSV)
+candidates:
+	@poetry run intellidj candidates $(CSV) $(if $(LIMIT),--limit $(LIMIT),)
 
-duplicates:
-	@CMD='poetry run python scripts/find_duplicate_tracks.py --source-dir "$(DUP_SOURCE)" --match-mode "$(DUP_MATCH)" --action "$(DUP_ACTION)" --keep-strategy "$(DUP_KEEP)"'; \
+download:
+	@poetry run intellidj download --csv $(CANDIDATES_CSV) $(if $(LIMIT),--limit $(LIMIT),)
+
+enrich:
+	@poetry run intellidj enrich --csv $(CSV) --input-dir $(DOWNLOADS_DIR)
+
+playlist:
+	@poetry run intellidj playlist --csv $(CANDIDATES_CSV) --library-dir "$(LIBRARY_DIR)" --out-dir $(PLAYLIST_OUT)
+
+dedupe:
+	@CMD='poetry run intellidj dedupe "$(DUP_SOURCE)" --match-mode "$(DUP_MATCH)" --action "$(DUP_ACTION)" --keep-strategy "$(DUP_KEEP)"'; \
 	if [ -n "$(DUP_COMPARE)" ]; then CMD="$$CMD --compare-dir \"$(DUP_COMPARE)\""; fi; \
 	if [ -n "$(DUP_PREFER_ORIGIN)" ]; then CMD="$$CMD --prefer-origin \"$(DUP_PREFER_ORIGIN)\""; fi; \
 	if [ "$(DUP_ACTION)" = "move" ]; then CMD="$$CMD --review-dir \"$(DUP_REVIEW)\""; fi; \
-	if [ "$(DUP_ACTION)" = "delete" ] && [ "$(DUP_CLEANUP_EMPTY)" = "1" ]; then CMD="$$CMD --cleanup-empty-dirs"; fi; \
+	if [ "$(DUP_CLEANUP_EMPTY)" = "1" ]; then CMD="$$CMD --cleanup-empty-dirs"; fi; \
 	if [ "$(DUP_DRY_RUN)" = "1" ]; then CMD="$$CMD --dry-run"; fi; \
 	if [ "$(DUP_ACTION)" != "report" ] && [ "$(DUP_DRY_RUN)" != "1" ]; then CMD="$$CMD --yes"; fi; \
 	echo "$$CMD"; \
 	eval "$$CMD"
 
-ui:
-	@poetry run streamlit run ui/streamlit_app.py
+run:
+	@poetry run intellidj run --csv $(CSV)
 
-duplicates-ui:
-	@poetry run streamlit run ui/streamlit_duplicates_app.py
+# ── Testing ───────────────────────────────────────────────────────────────────
 
 test:
 	@poetry run pytest
 
 test-cov:
-	@poetry run pytest --cov=. --cov-report=term-missing
+	@poetry run pytest --cov=intellidj --cov-report=term-missing

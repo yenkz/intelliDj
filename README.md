@@ -1,112 +1,210 @@
 # IntelliDj
 
-DJing tools to select, download, organize, and enrich music for DJ workflows.
+CLI toolkit to select, download, organize, and enrich music for DJ workflows.
 
-## Quickstart (macOS, end-to-end)
+**Core pipeline:**
+Spotify CSV export → style inference → Soulseek search/download (slskd) → tag enrichment → beets library import → M3U playlist export
 
-### Pre-requisites (for non-tech-geek users)
+## Quickstart
 
-The following software needs to be installed before following the steps below:
+### Prerequisites
 
 - [Git](https://git-scm.com/install/mac)
-- [Homebrew](https://brew.sh/)
-- MacOS's developer tools ([xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12))
+- [Docker](https://docs.docker.com/get-docker/) (for slskd)
+- [Poetry](https://python-poetry.org/docs/#installation)
+- Python 3.10+
 
-### Steps to follow
+macOS users: also install [Homebrew](https://brew.sh/) and Xcode command-line tools.
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/yenkz/intelliDj.git
-   cd intelliDj
-   ```
-2. Install prerequisites (Docker Desktop + Poetry), then start Docker Desktop:
-   ```bash
-   make prereqs
-   ```
-   If anything is missing, install it and re-run `make prereqs`. See [Setup and prerequisites](docs/setup.md).
-3. Install Python dependencies:
-   ```bash
-   make install-python
-   ```
-   (Uses Poetry under the hood.) Or use pip-only:
-   ```bash
-   make install-python-pip
-   ```
-4. Configure slskd and your API key (see [slskd setup](docs/slskd.md)):
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and set `SLSKD_API_KEY` (see docs for slskd setup).
-5. Start slskd (see [slskd setup](docs/slskd.md)):
-   ```bash
-   docker compose up -d
-   ```
-
-6. Choose how to run IntelliDj:
-
-   **Option A: Streamlit UI (recommended for most users)**
-   ```bash
-   make ui
-   ```
-   Then open the local URL shown in terminal (usually `http://localhost:8501`) and run the workflow step-by-step from the UI.
-
-   **Option B: CLI (script-by-script)**
-   Continue with steps 7-12 below.
-
-7. Export a Spotify playlist CSV (see [Spotify export](docs/spotify-export.md)).
-8. Generate download candidates (see [Output format](docs/output-format.md)):
-   ```bash
-   poetry run python csv_to_dj_pipeline.py
-   ```
-   Or pass a custom input CSV:
-   ```bash
-   poetry run python csv_to_dj_pipeline.py --input csv/Liked_Songs.csv
-   ```
-   If `--output` is not provided, output defaults to `<input_stem>_dj_candidates.csv` (for example `spotify_export_dj_candidates.csv` or `csv/Liked_Songs_dj_candidates.csv`).
-9. Download tracks via slskd (see [slskd setup](docs/slskd.md)):
-   ```bash
-   poetry run python dj_to_slskd_pipeline.py --csv spotify_export_dj_candidates.csv
-   ```
-10. (Optional) Re-apply Spotify metadata before beets (see [Recommendations](docs/recommendations.md)):
-   ```bash
-   poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
-   ```
-11. Import into your library with beets (create `~/.config/beets/config.yaml` first; see [Beets cleanup workflow](docs/beets.md)):
-   ```bash
-   poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
-   ```
-12. (Optional) Normalize loudness in-place (see [Recommendations](docs/recommendations.md)):
-   ```bash
-   scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
-   ```
-
-## Optional Tools
-
-### Duplicate Track Finder
-
-Find duplicates within one folder or across two folders, then:
-
-- report only
-- move duplicates to a review folder
-- delete duplicates (with safety checks)
-
-Launch UI:
+### Install
 
 ```bash
-make duplicates-ui
+git clone https://github.com/yenkz/intelliDj.git
+cd intelliDj
+make install-python
 ```
 
-Or run CLI:
+### Configure slskd
 
 ```bash
-poetry run python scripts/find_duplicate_tracks.py --source-dir ~/Music/DJ/library
+cp .env.example .env
+# Edit .env — set SLSKD_API_KEY, SLSKD_SLSK_USERNAME, SLSKD_SLSK_PASSWORD
+docker compose up -d
+```
+
+See [slskd setup](docs/slskd.md) for full details.
+
+---
+
+## Usage
+
+All commands are available via the `intellidj` binary (installed by Poetry):
+
+```
+intellidj --help
+```
+
+Global options available on every command:
+
+| Option | Description |
+|---|---|
+| `--env FILE` | Path to `.env` file (default: `.env` in CWD) |
+| `--host URL` | Override `SLSKD_HOST` |
+| `--api-key TEXT` | Override `SLSKD_API_KEY` |
+| `--quiet` | Suppress per-item output, show summary only |
+| `--json` | Emit newline-delimited JSON (for scripting) |
+| `--log-file FILE` | Append all output to a log file |
+
+---
+
+### 1. Generate candidates from a Spotify export
+
+Export a playlist from Spotify ([how-to](docs/spotify-export.md)), then:
+
+```bash
+intellidj candidates spotify_export.csv
+# → writes spotify_export_dj_candidates.csv
+```
+
+```bash
+intellidj candidates spotify_export.csv --output my_candidates.csv --limit 50
+```
+
+With `--dry-run`, prints one `Artist - Track` search string per line to stdout — useful for piping:
+
+```bash
+intellidj candidates spotify_export.csv --dry-run | intellidj download --stdin
+```
+
+---
+
+### 2. Download tracks via slskd
+
+```bash
+# From a candidates CSV
+intellidj download --csv dj_candidates.csv
+
+# Single track
+intellidj download --artist "Bicep" --track "Glue"
+
+# Plain text file (one "Artist - Track" per line)
+intellidj download --list my_tracklist.txt
+
+# Pipe from candidates
+intellidj candidates spotify_export.csv --dry-run | intellidj download --stdin
+
+# Dry-run: search but don't queue
+intellidj download --csv dj_candidates.csv --dry-run
+```
+
+Key options: `--limit N`, `--search-timeout-ms`, `--response-limit`, `--debug`
+
+---
+
+### 3. Enrich audio tags from Spotify metadata
+
+After downloads complete, write ID3/FLAC tags from the Spotify CSV:
+
+```bash
+intellidj enrich --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete
+```
+
+```bash
+# Write extra Spotify fields (energy, danceability, key…)
+intellidj enrich --csv spotify_export.csv --custom-tags
+
+# Preview matches without writing tags
+intellidj enrich --csv spotify_export.csv --dry-run --report /tmp/match_report.csv
+```
+
+---
+
+### 4. Import into beets
+
+Create `~/.config/beets/config.yaml` first ([beets guide](docs/beets.md)), then:
+
+```bash
+make beets-import
+# or directly:
+beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
+```
+
+---
+
+### 5. Export M3U playlists by style
+
+```bash
+intellidj playlist --csv dj_candidates.csv --library-dir ~/Music/DJ/library
+# → writes playlists/Deep_House.m3u, playlists/Tech_House.m3u, etc.
+```
+
+---
+
+### 6. Normalize loudness (optional)
+
+```bash
+scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
+```
+
+---
+
+### Run the full pipeline in one command
+
+```bash
+intellidj run --csv spotify_export.csv
+# or dry-run first:
+intellidj run --csv spotify_export.csv --dry-run
+```
+
+Skip individual steps with `--skip-candidates`, `--skip-download`, `--skip-enrich`, `--skip-playlist`.
+
+---
+
+## Duplicate track finder
+
+Detect duplicates by file hash, metadata, or both — then report, move, or delete:
+
+```bash
+# Report only (safe default)
+intellidj dedupe ~/Music/DJ/library
+
+# Cross-folder: find duplicates between library and downloads
+intellidj dedupe ~/Music/DJ/library --compare-dir ~/Soulseek/downloads/complete --dry-run
+
+# Move duplicates to a review folder, keep best quality copy
+intellidj dedupe ~/Music/DJ/library --action move --review-dir ~/review --yes
+
+# Export a CSV report
+intellidj dedupe ~/Music/DJ/library --export-csv report.csv
 ```
 
 Full guide: [Duplicate track detection](docs/duplicates.md)
 
-## Quickstart (Windows 11 + PowerShell, end-to-end)
+---
+
+## Makefile shortcuts
+
+```bash
+make candidates          # intellidj candidates $(CSV)
+make download            # intellidj download --csv $(CANDIDATES_CSV)
+make enrich              # intellidj enrich --csv $(CSV) --input-dir $(DOWNLOADS_DIR)
+make playlist            # intellidj playlist ...
+make dedupe              # intellidj dedupe $(DUP_SOURCE) ...
+make run                 # intellidj run --csv $(CSV)
+make beets-import        # run beets import via shell script
+make test                # run pytest
+make test-cov            # run pytest with coverage
+```
+
+Override variables inline: `make download CANDIDATES_CSV=my_candidates.csv LIMIT=20`
+
+---
+
+## Windows
 
 Use the dedicated guide: [Windows 11 PowerShell quickstart](docs/windows.md).
+
+---
 
 ## Docs
 
@@ -117,12 +215,10 @@ Use the dedicated guide: [Windows 11 PowerShell quickstart](docs/windows.md).
 - [Duplicate track detection](docs/duplicates.md)
 - [Beets cleanup workflow](docs/beets.md)
 - [Output format](docs/output-format.md)
-- [Workflow diagram](diagram.md)
 - [Recommendations](docs/recommendations.md)
 - [Traktor automation](docs/traktor.md)
 - [Rekordbox automation](docs/rekordbox.md)
-- [Streamlit UI](docs/ui.md)
 
 ## Contributing
 
-Contributions welcome! Please open issues for bugs or feature requests.
+Contributions welcome. Open issues for bugs or feature requests.

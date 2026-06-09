@@ -7,7 +7,7 @@ import pytest
 if "slskd_api" not in sys.modules:
     sys.modules["slskd_api"] = types.SimpleNamespace(SlskdClient=object)
 
-import dj_to_slskd_pipeline as mod
+import intellidj.pipeline.downloader as mod
 
 
 def test_build_api_base():
