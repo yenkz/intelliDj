@@ -6,8 +6,8 @@ LOG_FILE="$LOG_DIR/$(basename "$0" .sh).log"
 mkdir -p "$LOG_DIR"
 exec >>"$LOG_FILE" 2>&1
 
-if ! command -v poetry >/dev/null 2>&1; then
-  python -m pip install poetry
+if ! command -v uv >/dev/null 2>&1; then
+  curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
-poetry install --no-root
+uv sync --group dev
