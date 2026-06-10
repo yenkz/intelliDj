@@ -11,7 +11,7 @@ Spotify CSV export → metadata cleaning & style inference → Soulseek search/d
 
 - **Language:** Python 3.10+
 - **UI:** Streamlit (`ui/`)
-- **Package manager:** Poetry (`pyproject.toml`)
+- **Package manager:** uv (`pyproject.toml`)
 - **Music library:** beets
 - **Download backend:** slskd (Soulseek) via Docker
 - **Key libraries:** pandas, mutagen, slskd-api, python-dotenv, requests

@@ -1,25 +1,29 @@
-[tool.poetry]
+[project]
 name = "intellidj"
 version = "0.1.0"
 description = "DJing tools to select, download, organize and enrich music"
-authors = ["yenkz <cpecile@gmail.com>"]
+authors = [{name = "yenkz", email = "cpecile@gmail.com"}]
 readme = "README.md"
-package-mode = false
+requires-python = ">=3.10"
+dependencies = [
+    "pandas",
+    "beets",
+    "slskd-api",
+    "typing_extensions",
+    "requests",
+    "mutagen",
+    "streamlit",
+    "python-dotenv",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-pandas = "*"
-beets = "*"
-slskd-api = "*"
-typing_extensions = "*"
-requests = "*"
-mutagen = "*"
-streamlit = "*"
-python-dotenv = "*"
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-cov = "*"
+[tool.uv]
+package = false
 
 [tool.coverage.run]
 source = ["."]
@@ -32,7 +36,3 @@ exclude_lines = [
     "raise AssertionError",
     "raise NotImplementedError",
 ]
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"

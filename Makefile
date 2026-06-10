@@ -20,7 +20,7 @@ else
   DETECTED_OS := linux
 endif
 
-.PHONY: prereqs install-docker install-poetry install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists slskd-download duplicates ui duplicates-ui test test-cov
+.PHONY: prereqs install-docker install-uv install-python install-python-pip install-beets-deps install-keyfinder-cli beets-import playlists slskd-download duplicates ui duplicates-ui test test-cov
 
 prereqs:
 	@echo "Detected OS: $(DETECTED_OS)"
@@ -31,16 +31,16 @@ prereqs:
 		if ! command -v docker >/dev/null 2>&1; then \
 			echo "Docker not found. Run 'make install-docker' or install Docker Desktop."; \
 		fi; \
-		if ! command -v poetry >/dev/null 2>&1; then \
-			echo "Poetry not found. Run 'make install-poetry'."; \
+		if ! command -v uv >/dev/null 2>&1; then \
+			echo "uv not found. Run 'make install-uv'."; \
 		fi; \
 		echo "Prereq check complete."; \
 	elif [ "$(DETECTED_OS)" = "windows" ]; then \
 		echo "Windows detected. Please install Docker Desktop manually from https://www.docker.com/products/docker-desktop/"; \
-		echo "Then install Poetry: python -m pip install poetry"; \
+		echo "Then install uv: powershell -ExecutionPolicy Bypass -c \"irm https://astral.sh/uv/install.ps1 | iex\""; \
 	else \
 		echo "Linux detected. Install Docker Engine + Compose via your distro packages."; \
-		echo "Then install Poetry: python -m pip install poetry"; \
+		echo "Then install uv: curl -LsSf https://astral.sh/uv/install.sh | sh"; \
 	fi
 
 install-docker:
@@ -53,8 +53,12 @@ install-docker:
 		echo "Please install Docker Engine and Docker Compose via your distro packages."; \
 	fi
 
-install-poetry:
-	@python -m pip install poetry
+install-uv:
+	@if [ "$(DETECTED_OS)" = "windows" ]; then \
+		powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 | iex"; \
+	else \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+	fi
 
 install-python:
 	@if [ "$(DETECTED_OS)" = "windows" ]; then \
@@ -93,13 +97,13 @@ beets-import:
 	fi
 
 playlists:
-	@poetry run python scripts/export_m3u_by_style.py --csv $(CSV) --library-dir $(LIBRARY_DIR) --out-dir $(PLAYLIST_OUT)
+	@uv run python scripts/export_m3u_by_style.py --csv $(CSV) --library-dir $(LIBRARY_DIR) --out-dir $(PLAYLIST_OUT)
 
 slskd-download:
-	@poetry run python dj_to_slskd_pipeline.py --csv $(CSV)
+	@uv run python dj_to_slskd_pipeline.py --csv $(CSV)
 
 duplicates:
-	@CMD='poetry run python scripts/find_duplicate_tracks.py --source-dir "$(DUP_SOURCE)" --match-mode "$(DUP_MATCH)" --action "$(DUP_ACTION)" --keep-strategy "$(DUP_KEEP)"'; \
+	@CMD='uv run python scripts/find_duplicate_tracks.py --source-dir "$(DUP_SOURCE)" --match-mode "$(DUP_MATCH)" --action "$(DUP_ACTION)" --keep-strategy "$(DUP_KEEP)"'; \
 	if [ -n "$(DUP_COMPARE)" ]; then CMD="$$CMD --compare-dir \"$(DUP_COMPARE)\""; fi; \
 	if [ -n "$(DUP_PREFER_ORIGIN)" ]; then CMD="$$CMD --prefer-origin \"$(DUP_PREFER_ORIGIN)\""; fi; \
 	if [ "$(DUP_ACTION)" = "move" ]; then CMD="$$CMD --review-dir \"$(DUP_REVIEW)\""; fi; \
@@ -110,13 +114,13 @@ duplicates:
 	eval "$$CMD"
 
 ui:
-	@poetry run streamlit run ui/streamlit_app.py
+	@uv run streamlit run ui/streamlit_app.py
 
 duplicates-ui:
-	@poetry run streamlit run ui/streamlit_duplicates_app.py
+	@uv run streamlit run ui/streamlit_duplicates_app.py
 
 test:
-	@poetry run pytest
+	@uv run pytest
 
 test-cov:
-	@poetry run pytest --cov=. --cov-report=term-missing
+	@uv run pytest --cov=. --cov-report=term-missing

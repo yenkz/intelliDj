@@ -7,11 +7,11 @@ $logFile = Join-Path $logDir 'install_python_deps.log'
 
 Start-Transcript -Path $logFile -Append | Out-Null
 try {
-    if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
-        py -m pip install poetry
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 | iex"
     }
 
-    poetry install --no-root
+    uv sync --group dev
 }
 finally {
     Stop-Transcript | Out-Null
