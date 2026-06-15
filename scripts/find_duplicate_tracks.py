@@ -11,6 +11,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from intellidj_db import IntelliDJDB, make_track_key
+from intellidj_common import setup_script_logging
 from mutagen import File as MutagenFile
 
 
@@ -26,38 +32,6 @@ AUDIO_EXTENSIONS = {
     ".opus",
     ".wma",
 }
-
-
-def _setup_logging() -> None:
-    script_path = Path(__file__).resolve()
-    repo_root = None
-    for parent in [script_path.parent] + list(script_path.parents):
-        if (parent / "pyproject.toml").exists() or (parent / ".git").exists():
-            repo_root = parent
-            break
-    if repo_root is None:
-        repo_root = script_path.parent
-    log_dir = repo_root / "log"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / f"{script_path.stem}.log"
-    log_file = log_path.open("a", encoding="utf-8")
-
-    class Tee:
-        def __init__(self, *streams):
-            self.streams = streams
-
-        def write(self, data):
-            for stream in self.streams:
-                stream.write(data)
-                stream.flush()
-
-        def flush(self):
-            for stream in self.streams:
-                stream.flush()
-
-    sys.stdout = Tee(sys.stdout, log_file)
-    sys.stderr = Tee(sys.stderr, log_file)
-
 
 @dataclass(frozen=True)
 class TrackFile:
@@ -536,6 +510,11 @@ def main() -> None:
     )
     parser.add_argument("--export-csv", help="Write decisions to CSV")
     parser.add_argument("--export-json", help="Write decisions to JSON")
+    parser.add_argument(
+        "--db-path",
+        default=None,
+        help="SQLite path for lifecycle tracking (default: INTELLIDJ_DB_PATH or ./intellidj.db)",
+    )
     args = parser.parse_args()
 
     source_dir = Path(args.source_dir).expanduser().resolve()
@@ -559,66 +538,204 @@ def main() -> None:
             "Refusing to modify files without explicit confirmation. Use --yes or run with --dry-run."
         )
 
-    include_hash = args.match_mode in {"hash", "hybrid"}
-    tracks = collect_tracks(source_dir, origin="source", include_hash=include_hash)
-    if compare_dir and cross_compare:
-        tracks.extend(collect_tracks(compare_dir, origin="compare", include_hash=include_hash))
-
-    if not tracks:
-        print("No supported audio files found.")
-        return
-
-    groups = detect_duplicate_groups(
-        tracks,
-        match_mode=args.match_mode,
-        duration_bucket_seconds=args.duration_bucket_seconds,
-        cross_compare_only=cross_compare,
+    db = IntelliDJDB(args.db_path)
+    run_id = db.start_run(
+        script_name="find_duplicate_tracks.py",
+        input_path=str(source_dir),
+        output_path=str(compare_dir) if compare_dir else None,
+        options={
+            "compare_dir": str(compare_dir) if compare_dir else None,
+            "match_mode": args.match_mode,
+            "duration_bucket_seconds": args.duration_bucket_seconds,
+            "action": args.action,
+            "keep_strategy": args.keep_strategy,
+            "review_dir": args.review_dir,
+            "prefer_origin": args.prefer_origin,
+            "cleanup_empty_dirs": args.cleanup_empty_dirs,
+            "dry_run": args.dry_run,
+            "export_csv": args.export_csv,
+            "export_json": args.export_json,
+            "db_path": args.db_path,
+        },
     )
+    pipeline_status = "success"
+    tracks: List[TrackFile] = []
+    decisions: List[Decision] = []
 
-    print(f"Scanned tracks: {len(tracks)}")
-    print(f"Duplicate groups: {len(groups)}")
+    try:
+        include_hash = args.match_mode in {"hash", "hybrid"}
+        tracks = collect_tracks(source_dir, origin="source", include_hash=include_hash)
+        if compare_dir and cross_compare:
+            tracks.extend(collect_tracks(compare_dir, origin="compare", include_hash=include_hash))
 
-    if not groups:
-        print("No duplicates detected.")
-        return
+        if not tracks:
+            print("No supported audio files found.")
+            return
 
-    review_dir = Path(args.review_dir).expanduser().resolve() if args.review_dir else None
-    decisions = apply_action(
-        groups,
-        action=args.action,
-        keep_strategy=args.keep_strategy,
-        prefer_origin=args.prefer_origin,
-        review_dir=review_dir,
-        prune_roots=[path for path in [source_dir, compare_dir] if path is not None],
-        cleanup_empty_dirs=args.cleanup_empty_dirs,
-        dry_run=args.dry_run,
-    )
+        track_id_by_path: Dict[str, int] = {}
+        for track in tracks:
+            duration_ms = int(round(track.duration_sec * 1000)) if track.duration_sec else None
+            track_key = make_track_key(
+                artist=track.artist,
+                title=track.title,
+                search_string=track.path.stem,
+                duration_ms=duration_ms,
+            )
+            track_id = db.upsert_track(
+                track_key=track_key,
+                artist=track.artist,
+                title=track.title,
+                duration_ms=duration_ms,
+                source_search_string=track.path.stem,
+                source_csv=None,
+            )
+            track_id_by_path[str(track.path)] = track_id
+            db.upsert_asset(
+                run_id=run_id,
+                track_id=track_id,
+                asset_type="filesystem_track",
+                path=str(track.path),
+                origin=track.origin,
+                status="seen",
+                size_bytes=track.size_bytes,
+                extra={"bitrate_kbps": track.bitrate_kbps, "sample_rate": track.sample_rate},
+            )
 
-    duplicate_count = sum(1 for item in decisions if item.role == "duplicate")
-    move_count = sum(1 for item in decisions if item.action == "move")
-    delete_count = sum(1 for item in decisions if item.action == "delete")
+        groups = detect_duplicate_groups(
+            tracks,
+            match_mode=args.match_mode,
+            duration_bucket_seconds=args.duration_bucket_seconds,
+            cross_compare_only=cross_compare,
+        )
 
-    print(f"Duplicates found: {duplicate_count}")
-    if args.action == "move":
-        state = "would move" if args.dry_run else "moved"
-        print(f"Duplicates {state}: {move_count}")
-    elif args.action == "delete":
-        state = "would delete" if args.dry_run else "deleted"
-        print(f"Duplicates {state}: {delete_count}")
-    else:
-        print("Report-only mode selected; no files modified.")
+        print(f"Scanned tracks: {len(tracks)}")
+        print(f"Duplicate groups: {len(groups)}")
 
-    if args.export_csv:
-        csv_path = Path(args.export_csv).expanduser().resolve()
-        export_csv_rows(csv_path, decisions)
-        print(f"CSV report written: {csv_path}")
+        if not groups:
+            print("No duplicates detected.")
+            return
 
-    if args.export_json:
-        json_path = Path(args.export_json).expanduser().resolve()
-        export_json_rows(json_path, decisions)
-        print(f"JSON report written: {json_path}")
+        review_dir = Path(args.review_dir).expanduser().resolve() if args.review_dir else None
+        decisions = apply_action(
+            groups,
+            action=args.action,
+            keep_strategy=args.keep_strategy,
+            prefer_origin=args.prefer_origin,
+            review_dir=review_dir,
+            prune_roots=[path for path in [source_dir, compare_dir] if path is not None],
+            cleanup_empty_dirs=args.cleanup_empty_dirs,
+            dry_run=args.dry_run,
+        )
+
+        duplicate_count = sum(1 for item in decisions if item.role == "duplicate")
+        move_count = sum(1 for item in decisions if item.action == "move")
+        delete_count = sum(1 for item in decisions if item.action == "delete")
+
+        print(f"Duplicates found: {duplicate_count}")
+        if args.action == "move":
+            state = "would move" if args.dry_run else "moved"
+            print(f"Duplicates {state}: {move_count}")
+        elif args.action == "delete":
+            state = "would delete" if args.dry_run else "deleted"
+            print(f"Duplicates {state}: {delete_count}")
+        else:
+            print("Report-only mode selected; no files modified.")
+
+        for item in decisions:
+            track_id = track_id_by_path.get(item.path)
+            db.add_duplicate_decision(
+                run_id=run_id,
+                group_id=item.group_id,
+                track_id=track_id,
+                role=item.role,
+                action=item.action,
+                origin=item.origin,
+                path=item.path,
+                target_path=item.target_path,
+                keep_path=item.keep_path,
+                keep_strategy=item.keep_strategy,
+                reason=item.reason,
+            )
+            event_status = "keep_selected" if item.role == "keep" else f"duplicate_{item.action}"
+            db.add_event(
+                run_id=run_id,
+                track_id=track_id,
+                stage="duplicates",
+                status=event_status,
+                message=item.reason,
+                details={"group_id": item.group_id, "target_path": item.target_path, "keep_path": item.keep_path},
+                file_path=item.path,
+            )
+            db.upsert_track_stage_state(
+                track_id=track_id,
+                stage="duplicates",
+                status=event_status,
+                run_id=run_id,
+                method=args.action,
+                details={"group_id": item.group_id, "target_path": item.target_path, "keep_path": item.keep_path},
+            )
+            if item.role == "duplicate":
+                if item.action == "move":
+                    db.upsert_asset(
+                        run_id=run_id,
+                        track_id=track_id,
+                        asset_type="filesystem_track",
+                        path=item.path,
+                        origin=item.origin,
+                        status="moved_to_review" if not args.dry_run else "would_move_to_review",
+                    )
+                    db.upsert_asset(
+                        run_id=run_id,
+                        track_id=track_id,
+                        asset_type="duplicate_review",
+                        path=item.target_path,
+                        origin=item.origin,
+                        status="review_pending" if not args.dry_run else "would_review_pending",
+                    )
+                elif item.action == "delete":
+                    db.upsert_asset(
+                        run_id=run_id,
+                        track_id=track_id,
+                        asset_type="filesystem_track",
+                        path=item.path,
+                        origin=item.origin,
+                        status="deleted" if not args.dry_run else "would_delete",
+                    )
+                elif item.action == "report":
+                    db.upsert_asset(
+                        run_id=run_id,
+                        track_id=track_id,
+                        asset_type="filesystem_track",
+                        path=item.path,
+                        origin=item.origin,
+                        status="duplicate_reported",
+                    )
+
+        if args.export_csv:
+            csv_path = Path(args.export_csv).expanduser().resolve()
+            export_csv_rows(csv_path, decisions)
+            print(f"CSV report written: {csv_path}")
+
+        if args.export_json:
+            json_path = Path(args.export_json).expanduser().resolve()
+            export_json_rows(json_path, decisions)
+            print(f"JSON report written: {json_path}")
+    except Exception:
+        pipeline_status = "error"
+        raise
+    finally:
+        duplicate_count = sum(1 for item in decisions if item.role == "duplicate")
+        db.finish_run(
+            run_id,
+            status=pipeline_status,
+            total_count=len(tracks),
+            success_count=duplicate_count,
+            skipped_count=0,
+            error_count=1 if pipeline_status == "error" else 0,
+        )
+        db.close()
 
 
 if __name__ == "__main__":
-    _setup_logging()
+    setup_script_logging(__file__)
     main()

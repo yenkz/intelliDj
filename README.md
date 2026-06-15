@@ -32,6 +32,10 @@ The following software needs to be installed before following the steps below:
    ```bash
    make install-python-pip
    ```
+   Optional: initialize the lifecycle DB explicitly (it auto-creates on first run):
+   ```bash
+   make init-db
+   ```
 4. Configure slskd and your API key (see [slskd setup](docs/slskd.md)):
    ```bash
    cp .env.example .env
@@ -54,31 +58,62 @@ The following software needs to be installed before following the steps below:
    Continue with steps 7-12 below.
 
 7. Export a Spotify playlist CSV (see [Spotify export](docs/spotify-export.md)).
-8. Generate download candidates (see [Output format](docs/output-format.md)):
+8. (Optional) Scan an existing local folder into DB first:
    ```bash
-   poetry run python csv_to_dj_pipeline.py
+   make scan-local SCAN_DIR=~/Music IMPORT_LABEL=my_set DB_PATH=intellidj.db
    ```
-   Or pass a custom input CSV:
+9. Import Exportify CSV into DB (source of truth):
    ```bash
-   poetry run python csv_to_dj_pipeline.py --input csv/Liked_Songs.csv
+   make import-csv-db EXPORTIFY_CSV=spotify_export.csv IMPORT_LABEL=my_set DB_PATH=intellidj.db
    ```
-   If `--output` is not provided, output defaults to `<input_stem>_dj_candidates.csv` (for example `spotify_export_dj_candidates.csv` or `csv/Liked_Songs_dj_candidates.csv`).
-9. Download tracks via slskd (see [slskd setup](docs/slskd.md)):
+   Or direct CLI:
    ```bash
-   poetry run python dj_to_slskd_pipeline.py --csv spotify_export_dj_candidates.csv
+   poetry run python csv_to_dj_pipeline.py --input csv/Liked_Songs.csv --db-path intellidj.db --label my_set
    ```
-10. (Optional) Re-apply Spotify metadata before beets (see [Recommendations](docs/recommendations.md)):
+   Optional DB export CSV:
    ```bash
-   poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
+   make export-db-csv CSV=exports/tracks.csv DB_PATH=intellidj.db PROCESS_SCOPE=all
    ```
-11. Import into your library with beets (create `~/.config/beets/config.yaml` first; see [Beets cleanup workflow](docs/beets.md)):
+10. Download tracks via slskd from DB (see [slskd setup](docs/slskd.md)):
    ```bash
-   poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
+   make slskd-download-db DB_PATH=intellidj.db PROCESS_SCOPE=new IMPORT_LABEL=my_set
    ```
-12. (Optional) Normalize loudness in-place (see [Recommendations](docs/recommendations.md)):
+   Direct CLI:
+   ```bash
+   poetry run python dj_to_slskd_pipeline.py --db-path intellidj.db --scope new --label my_set
+   ```
+11. (Optional) Re-apply Spotify metadata before beets (see [Recommendations](docs/recommendations.md)):
+   ```bash
+   poetry run python scripts/enrich_tags_from_spotify_csv.py --db-path intellidj.db --scope new --label my_set --input-dir ~/Soulseek/downloads/complete --custom-tags
+   ```
+12. Import into your library with beets (create `~/.config/beets/config.yaml` first; see [Beets cleanup workflow](docs/beets.md)):
+   ```bash
+   make beets-import DB_PATH=intellidj.db DLS_DIR=~/Soulseek/downloads/complete PROCESS_SCOPE=new IMPORT_LABEL=my_set
+   ```
+13. Fetch and embed cover art thumbnails:
+   ```bash
+   make cover-art DB_PATH=intellidj.db PROCESS_SCOPE=new IMPORT_LABEL=my_set
+   ```
+14. (Optional) Normalize loudness in-place (see [Recommendations](docs/recommendations.md)):
    ```bash
    scripts/normalize_loudness.sh --input-dir ~/Music/DJ/library
    ```
+
+### End-to-end orchestration (DB-first)
+
+Run a full pipeline with reporting (dry-run friendly):
+
+```bash
+poetry run python scripts/run_pipeline.py \
+  --db-path intellidj.db \
+  --csv spotify_export.csv \
+  --label my_set \
+  --scope new \
+  --run-beets \
+  --run-cover-art \
+  --downloads-dir ~/Soulseek/downloads/complete \
+  --report-json reports/pipeline_report.json
+```
 
 ## Optional Tools
 
@@ -115,6 +150,9 @@ Use the dedicated guide: [Windows 11 PowerShell quickstart](docs/windows.md).
 - [Spotify export](docs/spotify-export.md)
 - [slskd (Docker + API downloads)](docs/slskd.md)
 - [Duplicate track detection](docs/duplicates.md)
+- [Lifecycle database (SQLite)](docs/database.md)
+- [Architecture diagram](docs/architecture.md)
+- [DB-first pipeline](docs/pipeline.md)
 - [Beets cleanup workflow](docs/beets.md)
 - [Output format](docs/output-format.md)
 - [Workflow diagram](diagram.md)

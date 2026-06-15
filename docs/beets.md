@@ -100,7 +100,7 @@ import:
 ## Dry-run (preview)
 
 ```bash
-poetry run beet -c ~/.config/beets/config.yaml import -p -s ~/Soulseek/downloads/complete
+poetry run python scripts/run_beets_import.py --db-path intellidj.db --beets-config ~/.config/beets/config.yaml --input-dir ~/Soulseek/downloads/complete --scope new --dry-run
 ```
 PowerShell:
 ```powershell
@@ -108,7 +108,13 @@ poetry run beet -c "$HOME/.config/beets/config.yaml" import -p -s "$HOME/Soulsee
 ```
 ## Optional: Tag Enrichment Before Import
 
-If you want to re-apply Spotify CSV metadata before beets, run:
+If you want to re-apply Spotify metadata before beets, run (DB-first):
+
+```bash
+poetry run python scripts/enrich_tags_from_spotify_csv.py --db-path intellidj.db --scope new --label my_set --input-dir ~/Soulseek/downloads/complete --custom-tags
+```
+
+Legacy CSV mode (deprecated):
 
 ```bash
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
@@ -122,14 +128,16 @@ Matching is more accurate when ISRC and duration are available (the script write
 
 ```bash
 poetry run python scripts/enrich_tags_from_spotify_csv.py \
-  --csv spotify_export.csv \
+  --db-path intellidj.db \
+  --scope new \
+  --label my_set \
   --input-dir ~/Soulseek/downloads/complete \
   --custom-tags \
   --report tag_enrichment_report.csv
 ```
 PowerShell:
 ```powershell
-poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --custom-tags --report tag_enrichment_report.csv
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --db-path intellidj.db --scope new --label my_set --input-dir "$HOME/Soulseek/downloads/complete" --custom-tags --report tag_enrichment_report.csv
 ```
 
 Optional flags:
@@ -139,11 +147,25 @@ Optional flags:
 ## Import
 
 ```bash
-poetry run beet -c ~/.config/beets/config.yaml import -s ~/Soulseek/downloads/complete
+poetry run python scripts/run_beets_import.py --db-path intellidj.db --beets-config ~/.config/beets/config.yaml --input-dir ~/Soulseek/downloads/complete --scope new --label my_set
 ```
 PowerShell:
 ```powershell
 poetry run beet -c "$HOME/.config/beets/config.yaml" import -s "$HOME/Soulseek/downloads/complete"
+```
+
+## Cover Art Thumbnails (Fetch + Embed)
+
+After import, fetch missing artwork and embed it into files:
+
+```bash
+poetry run python scripts/run_cover_art.py --db-path intellidj.db --beets-config ~/.config/beets/config.yaml --scope new --label my_set
+```
+
+Force refresh existing artwork:
+
+```bash
+poetry run python scripts/run_cover_art.py --db-path intellidj.db --beets-config ~/.config/beets/config.yaml --scope new --label my_set --force
 ```
 
 ## Optional: Loudness Normalization (2-pass loudnorm)

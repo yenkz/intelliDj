@@ -1,0 +1,46 @@
+[db]
+path = "intellidj.db"
+
+[paths]
+spotify_csv = "spotify_export.csv"
+downloads_dir = "~/Soulseek/downloads/Fina"
+inbox_dir = "~/Music/DJ/inbox"
+library_dir = "~/Music/DJ/library"
+beets_config = "~/.config/beets/config.yaml"
+scan_dir = ""
+candidates_csv_export = "spotify_export_dj_candidates.csv"
+
+[pipeline]
+scope = "new"
+label = ""
+import_method = ""
+
+[slskd]
+host = "http://localhost:5030"
+url_base = "/api/v0"
+search_timeout_ms = 90000
+response_limit = 100
+file_limit = 10000
+
+[matching]
+min_score = 0.86
+min_score_title = 0.78
+duration_tolerance_ms = 2000
+
+[cover_art]
+force = false
+skip_embed = false
+
+[loudnorm]
+target_lufs = "-9"
+target_tp = "-1.0"
+target_lra = "9"
+
+[fingerprint]
+acoustid_api_key = ""
+fpcalc_path = ""
+duration_tolerance_sec = 5.0
+enabled = true
+
+[audio_features]
+rapidapi_key = ""

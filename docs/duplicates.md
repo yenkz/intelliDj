@@ -97,6 +97,14 @@ poetry run python scripts/find_duplicate_tracks.py \
   --export-json reports/duplicates.json
 ```
 
+Write duplicate lifecycle events into a specific database:
+
+```bash
+poetry run python scripts/find_duplicate_tracks.py \
+  --source-dir ~/Music/DJ/library \
+  --db-path ~/Music/intellidj.db
+```
+
 Move duplicates to review folder:
 
 ```bash

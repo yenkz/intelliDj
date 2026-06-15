@@ -8,6 +8,7 @@ if "slskd_api" not in sys.modules:
     sys.modules["slskd_api"] = types.SimpleNamespace(SlskdClient=object)
 
 import dj_to_slskd_pipeline as mod
+import intellidj.slskd as slskd_mod
 
 
 def test_build_api_base():
@@ -145,7 +146,7 @@ def test_fetch_search_responses_404(monkeypatch):
     def fake_get(url, headers, timeout):
         return DummyResp()
 
-    monkeypatch.setattr(mod.requests, "get", fake_get)
+    monkeypatch.setattr(slskd_mod.requests, "get", fake_get)
     assert mod.fetch_search_responses("http://host", "key", "id") == []
 
 
@@ -163,7 +164,7 @@ def test_fetch_search_responses_list(monkeypatch):
     def fake_get(url, headers, timeout):
         return DummyResp()
 
-    monkeypatch.setattr(mod.requests, "get", fake_get)
+    monkeypatch.setattr(slskd_mod.requests, "get", fake_get)
     assert mod.fetch_search_responses("http://host", "key", "id") == [{"ok": True}]
 
 
@@ -181,5 +182,5 @@ def test_fetch_search_responses_non_list(monkeypatch):
     def fake_get(url, headers, timeout):
         return DummyResp()
 
-    monkeypatch.setattr(mod.requests, "get", fake_get)
+    monkeypatch.setattr(slskd_mod.requests, "get", fake_get)
     assert mod.fetch_search_responses("http://host", "key", "id") == []

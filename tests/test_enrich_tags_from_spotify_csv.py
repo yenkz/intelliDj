@@ -1,4 +1,4 @@
-import scripts.enrich_tags_from_spotify_csv as mod
+import intellidj.tagger as mod
 
 
 def test_normalize():

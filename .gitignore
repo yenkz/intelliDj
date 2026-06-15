@@ -35,6 +35,10 @@ slskd_data/*.yaml
 
 # Pipeline outputs / inputs
 *.csv
+intellidj.db
+*backup*.db
+pipeline_report.json
+reports/
 
 # Logs
 log/

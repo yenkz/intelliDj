@@ -80,21 +80,21 @@ Then open the local URL shown in terminal (usually `http://localhost:8501`) and 
 Generate candidate tracks:
 
 ```powershell
-poetry run python csv_to_dj_pipeline.py
+poetry run python csv_to_dj_pipeline.py --input spotify_export.csv --db-path intellidj.db --label my_set
 ```
 
-By default this writes `spotify_export_dj_candidates.csv` (or `<input_stem>_dj_candidates.csv` if you pass `--input`).
+DB is now the source of truth between steps (CSV handoff is deprecated).
 
 Queue downloads in slskd:
 
 ```powershell
-poetry run python dj_to_slskd_pipeline.py --csv spotify_export_dj_candidates.csv
+poetry run python dj_to_slskd_pipeline.py --db-path intellidj.db --scope new --label my_set
 ```
 
 Optional metadata enrichment:
 
 ```powershell
-poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --custom-tags
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --db-path intellidj.db --scope new --label my_set --input-dir "$HOME/Soulseek/downloads/complete" --custom-tags
 ```
 
 Optional beets import:

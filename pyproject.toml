@@ -14,7 +14,12 @@ dependencies = [
     "mutagen",
     "streamlit",
     "python-dotenv",
+    "pyacoustid>=1.3.0",
+    "spotipy>=2.23.0",
 ]
+
+[project.optional-dependencies]
+audio-analysis = ["essentia"]
 
 [dependency-groups]
 dev = [

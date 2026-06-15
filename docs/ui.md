@@ -28,20 +28,24 @@ The UI provides:
 Pipeline steps:
 
 1. Load the Spotify CSV into the project.
-2. Generate candidates CSV.
-3. Download via slskd.
-4. Enrich tags from the Spotify CSV.
-5. Import into beets.
-6. Normalize loudness.
+2. (Optional) Scan local music folder into DB.
+3. Import Spotify CSV into DB (source of truth).
+4. Download via slskd from DB.
+5. Enrich tags from DB metadata.
+6. Import into beets (wrapped to record DB stage state).
+7. Fetch + embed cover art (beets fetchart/embedart).
+8. Normalize loudness.
 
-## Candidates filename behavior
+Step 4/5 are DB-first:
 
-By default, the UI auto-generates the candidates filename from the Spotify CSV path:
+- uses `intellidj.db` with selectors:
+  - `scope`: `new`, `existing`, `all`
+  - optional `batch label`
+  - optional `batch id`
 
-- Input: `spotify_export.csv`
-- Output: `spotify_export_dj_candidates.csv`
+Step 3 can optionally export a candidates CSV for external tooling, but DB remains the source of truth.
 
-Disable **Auto candidates filename from Spotify CSV** in the sidebar if you want to set a custom output path manually.
+On macOS, Step 2 includes a **Select folder with Finder** button to pick the local scan directory without typing the path.
 
 ## Notes
 

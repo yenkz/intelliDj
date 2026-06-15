@@ -4,7 +4,7 @@
 
 Yes, you can enrich downloaded files with Spotify CSV metadata. A reliable approach:
 
-1. Use `spotify_export.csv` as the source of truth for tags.
+1. Use DB-ingested Exportify metadata as the source of truth (CSV is only for import).
 2. Match downloaded files using `search_string` or a simplified artist/title match.
 3. Write tags into the audio files before running beets (so beets can keep or improve them).
 
@@ -18,6 +18,12 @@ Recommended tags to write:
 Use the tagging script to re-apply Spotify metadata to downloaded files:
 
 ```bash
+poetry run python scripts/enrich_tags_from_spotify_csv.py --db-path intellidj.db --scope new --label my_set --input-dir ~/Soulseek/downloads/complete --custom-tags
+```
+
+Legacy CSV mode (deprecated):
+
+```bash
 poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --custom-tags
 ```
 PowerShell:
@@ -28,21 +34,21 @@ poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export
 Dry-run first:
 
 ```bash
-poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --dry-run
+poetry run python scripts/enrich_tags_from_spotify_csv.py --db-path intellidj.db --scope new --label my_set --input-dir ~/Soulseek/downloads/complete --dry-run
 ```
 PowerShell:
 ```powershell
-poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --dry-run
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --db-path intellidj.db --scope new --label my_set --input-dir "$HOME/Soulseek/downloads/complete" --dry-run
 ```
 
 Generate a report (to see why files were skipped and the best match scores):
 
 ```bash
-poetry run python scripts/enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir ~/Soulseek/downloads/complete --report tag_report.csv
+poetry run python scripts/enrich_tags_from_spotify_csv.py --db-path intellidj.db --scope new --label my_set --input-dir ~/Soulseek/downloads/complete --report tag_report.csv
 ```
 PowerShell:
 ```powershell
-poetry run python .\scripts\enrich_tags_from_spotify_csv.py --csv spotify_export.csv --input-dir "$HOME/Soulseek/downloads/complete" --report tag_report.csv
+poetry run python .\scripts\enrich_tags_from_spotify_csv.py --db-path intellidj.db --scope new --label my_set --input-dir "$HOME/Soulseek/downloads/complete" --report tag_report.csv
 ```
 
 ## Traktor/Rekordbox Playlists (Style-Based M3U)
